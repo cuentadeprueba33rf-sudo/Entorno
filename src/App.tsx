@@ -34,6 +34,7 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showSlashCommands, setShowSlashCommands] = useState(false);
   const [mode, setMode] = useState<'chat' | 'canvas'>('chat');
+  const [canvasCode, setCanvasCode] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -117,19 +118,36 @@ export default function App() {
     setIsLoading(true);
 
     try {
+      const systemPrompt = mode === 'canvas' 
+        ? `${PERSONALITY_PROMPTS[personality]}\nIMPORTANTE: Estás en MODO CANVAS. Tu objetivo es escribir código funcional (HTML/CSS/JS) que se pueda previsualizar. Responde ÚNICAMENTE con el bloque de código necesario. No des explicaciones en el chat.`
+        : PERSONALITY_PROMPTS[personality];
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-          personality: PERSONALITY_PROMPTS[personality]
+          personality: systemPrompt
         }),
       });
       
       if (!response.ok) throw new Error("Error en la respuesta del servidor");
       
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: "assistant", content: data.choices[0].message.content }]);
+      const assistantContent = data.choices[0].message.content;
+
+      if (mode === 'canvas') {
+        // Extract code from markdown if present, otherwise take full content
+        const codeMatch = assistantContent.match(/```(?:html|javascript|typescript|css|jsx|tsx)?\n([\s\S]*?)```/) || 
+                          assistantContent.match(/```([\s\S]*?)```/);
+        const extractedCode = codeMatch ? codeMatch[1] : assistantContent;
+        setCanvasCode(extractedCode);
+        
+        // Add a minimal message to chat to indicate generation
+        setMessages((prev) => [...prev, { role: "assistant", content: "✨ Código generado en el Sandbox." }]);
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", content: assistantContent }]);
+      }
       
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]); // Haptic feedback on completion
 
@@ -326,15 +344,7 @@ export default function App() {
           <h1 className="text-xl font-medium tracking-wide flex items-center gap-2 text-zinc-200">
             SAM <Sparkles className="w-4 h-4 text-purple-400" />
           </h1>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setMode(mode === 'chat' ? 'canvas' : 'chat')}
-              className={`p-2 rounded-full transition-colors ${mode === 'canvas' ? 'bg-indigo-500/20 text-indigo-400' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'}`}
-            >
-              {mode === 'chat' ? <Zap className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-            </button>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
-          </div>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
         </header>
 
         {/* Chat Area / Canvas Area */}
@@ -409,17 +419,51 @@ export default function App() {
           {mode === 'canvas' && (
             <div className="flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-zinc-200">Sandbox</h2>
+                <h2 className="text-lg font-medium text-zinc-200 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" /> Sandbox
+                </h2>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCanvasCode("")}
+                    className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
+                    title="Limpiar Sandbox"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                   <div className="w-3 h-3 rounded-full bg-red-500" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
                   <div className="w-3 h-3 rounded-full bg-green-500" />
                 </div>
               </div>
-              <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl">
-                <div className="w-full h-full flex items-center justify-center text-zinc-500">
-                  <p>El código generado aparecerá aquí.</p>
-                </div>
+              <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl relative">
+                {canvasCode ? (
+                  <iframe
+                    srcDoc={canvasCode.includes('<!DOCTYPE html>') ? canvasCode : `
+                      <!DOCTYPE html>
+                      <html>
+                        <head>
+                          <meta charset="utf-8">
+                          <meta name="viewport" content="width=device-width, initial-scale=1">
+                          <script src="https://cdn.tailwindcss.com"></script>
+                          <style>body { font-family: sans-serif; }</style>
+                        </head>
+                        <body>
+                          ${canvasCode.includes('<script') || canvasCode.includes('<style') ? canvasCode : `<div>${canvasCode}</div>`}
+                        </body>
+                      </html>
+                    `}
+                    className="w-full h-full border-none"
+                    title="Sandbox Preview"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
+                    <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
+                      <Bot className="w-8 h-8 text-zinc-300" />
+                    </div>
+                    <p className="text-lg font-medium text-zinc-600 mb-2">Sandbox Vacío</p>
+                    <p className="text-sm">Activa el modo Canvas y pídele a SAM que programe algo para verlo aquí.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -501,6 +545,14 @@ export default function App() {
                   <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><ImageIcon className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
                   <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
                   <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
+                  <div className="h-[1px] bg-white/5 my-1" />
+                  <button 
+                    type="button" 
+                    onClick={() => { setMode(mode === 'chat' ? 'canvas' : 'chat'); setIsPlusMenuOpen(false); }} 
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${mode === 'canvas' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-zinc-200'}`}
+                  >
+                    <Sparkles className="w-5 h-5" /> {mode === 'canvas' ? 'Desactivar Canvas' : 'Activar Canvas'}
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
