@@ -1,0 +1,5 @@
+{
+  "name": "Nemotron Reasoning Chat",
+  "description": "A chat application using OpenRouter's Nemotron model with reasoning capabilities.",
+  "requestFramePermissions": []
+}
