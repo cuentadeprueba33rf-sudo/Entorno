@@ -15,6 +15,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [isAppLoading, setIsAppLoading] = useState(true);
+  const [showNotice, setShowNotice] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +26,23 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const hasSeenNotice = localStorage.getItem('sam_notice_seen');
+    // Simulate epic loading time
+    const timer = setTimeout(() => {
+      setIsAppLoading(false);
+      if (!hasSeenNotice) {
+        setShowNotice(true);
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleDismissNotice = () => {
+    localStorage.setItem('sam_notice_seen', 'true');
+    setShowNotice(false);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -60,6 +79,109 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] bg-[#000000] text-zinc-100 font-sans overflow-hidden selection:bg-purple-500/30 relative">
+      {/* Epic Loading Screen */}
+      <AnimatePresence>
+        {isAppLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden"
+          >
+            {/* Minimalist Grid Background */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+
+            {/* Scanning light effect */}
+            <motion.div
+              animate={{ top: ['-10%', '110%'] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+              className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-20"
+            />
+            
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, filter: "blur(10px)" }}
+              animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="relative z-10 flex flex-col items-center"
+            >
+              <div className="flex items-center gap-6 md:gap-10">
+                <motion.span 
+                  initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 1 }}
+                  className="text-zinc-700 text-6xl md:text-8xl font-light"
+                >[</motion.span>
+                
+                <h1 className="text-7xl md:text-9xl font-black text-white tracking-[0.2em] drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                  SAM
+                </h1>
+
+                <motion.span 
+                  initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 1 }}
+                  className="text-zinc-700 text-6xl md:text-8xl font-light"
+                >]</motion.span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-48 md:w-64 h-[1px] bg-zinc-800 mt-10 relative overflow-hidden">
+                <motion.div 
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 bg-white"
+                />
+              </div>
+              
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1, duration: 1 }}
+                className="text-zinc-500 mt-6 text-xs tracking-[0.4em] uppercase font-mono"
+              >
+                Inicializando
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Under Construction Notice */}
+      <AnimatePresence>
+        {showNotice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(255,255,255,0.05)] relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-zinc-600 via-zinc-200 to-zinc-600" />
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-800">
+                  <Sparkles className="w-6 h-6 text-zinc-100" />
+                </div>
+                <h2 className="text-2xl font-semibold text-zinc-100">Aviso Importante</h2>
+              </div>
+              <p className="text-zinc-400 leading-relaxed mb-8">
+                SAM IA sigue en <span className="text-zinc-100 font-medium">fase de construcción y desarrollo</span>. Es posible que algunas funciones sean inestables, estén limitadas o cambien en el futuro.
+                <br/><br/>
+                Gracias por ser parte de esta etapa épica.
+              </p>
+              <button
+                onClick={handleDismissNotice}
+                className="w-full py-4 bg-white text-black rounded-xl font-medium text-lg hover:bg-zinc-200 transition-colors active:scale-[0.98]"
+              >
+                Entendido, vamos allá
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Subtle futuristic background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-900/10 blur-[120px] rounded-full pointer-events-none" />
 
