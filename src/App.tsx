@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout, HelpCircle, Trophy, ArrowRight, RotateCcw, LogOut } from "lucide-react";
+import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout, HelpCircle, Trophy, ArrowRight, RotateCcw, LogOut, Clock, ShieldCheck, History } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -40,6 +40,7 @@ export default function App() {
   const [showNotice, setShowNotice] = useState(false);
   const [personality, setPersonality] = useState<Personality>("professional");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'general' | 'updates'>('general');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showSlashCommands, setShowSlashCommands] = useState(false);
   const [mode, setMode] = useState<AppMode>('chat');
@@ -82,13 +83,13 @@ export default function App() {
       setPersonality(savedPersonality);
     }
 
-    // Simulate epic loading time
+    // Simulate optimal loading time
     const timer = setTimeout(() => {
       setIsAppLoading(false);
       if (!hasSeenNotice) {
         setShowNotice(true);
       }
-    }, 4000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -259,65 +260,127 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] bg-[#000000] text-zinc-100 font-sans overflow-hidden selection:bg-purple-500/30 relative">
-      {/* Epic Loading Screen */}
+      {/* Optimal Minimalist Loading Screen */}
       <AnimatePresence>
         {isAppLoading && (
           <motion.div
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden"
+            exit={{ opacity: 0, scale: 1.02, filter: "blur(20px)" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[100] bg-[#000000] flex flex-col items-center justify-center overflow-hidden"
           >
-            {/* Minimalist Grid Background */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
-
-            {/* Scanning light effect */}
-            <motion.div
-              animate={{ top: ['-10%', '110%'] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-              className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-20"
-            />
+            {/* Subtle Ambient Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px]" />
             
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, filter: "blur(10px)" }}
-              animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
               className="relative z-10 flex flex-col items-center"
             >
-              <div className="flex items-center gap-6 md:gap-10">
-                <motion.span 
-                  initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 1 }}
-                  className="text-zinc-700 text-6xl md:text-8xl font-light"
-                >[</motion.span>
-                
-                <h1 className="text-7xl md:text-9xl font-black text-white tracking-[0.2em] drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-                  SAM
-                </h1>
-
-                <motion.span 
-                  initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 1 }}
-                  className="text-zinc-700 text-6xl md:text-8xl font-light"
-                >]</motion.span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="w-48 md:w-64 h-[1px] bg-zinc-800 mt-10 relative overflow-hidden">
-                <motion.div 
-                  initial={{ x: "-100%" }}
-                  animate={{ x: "100%" }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute inset-0 bg-white"
+              {/* SAM Animated Logo - Neural Core Style */}
+              <div className="relative w-32 h-32 mb-12 flex items-center justify-center">
+                {/* Outer Pulsing Rings */}
+                <motion.div
+                  animate={{ 
+                    scale: [1, 1.5, 1],
+                    opacity: [0.1, 0.05, 0.1]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 border border-purple-500/30 rounded-full"
                 />
+                <motion.div
+                  animate={{ 
+                    scale: [1.2, 0.8, 1.2],
+                    opacity: [0.05, 0.1, 0.05]
+                  }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 border border-blue-500/20 rounded-full"
+                />
+
+                {/* The Core Morphing Shape */}
+                <div className="relative w-16 h-16">
+                  <motion.div
+                    animate={{ 
+                      borderRadius: ["40% 60% 60% 40% / 40% 40% 60% 60%", "60% 40% 40% 60% / 60% 60% 40% 40%", "40% 60% 60% 40% / 40% 40% 60% 60%"],
+                      rotate: [0, 90, 180, 270, 360],
+                    }}
+                    transition={{ 
+                      duration: 8, 
+                      repeat: Infinity, 
+                      ease: "linear" 
+                    }}
+                    className="absolute inset-0 bg-gradient-to-tr from-purple-600 via-blue-500 to-emerald-400 opacity-80 blur-[2px] shadow-[0_0_30px_rgba(168,85,247,0.5)]"
+                  />
+                  
+                  {/* Inner Core Sparkle */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div
+                      animate={{ 
+                        scale: [0.8, 1.1, 0.8],
+                        opacity: [0.7, 1, 0.7]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <Sparkles className="w-8 h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+                    </motion.div>
+                  </div>
+                </div>
+
+                {/* Orbiting Particles */}
+                {[...Array(3)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ 
+                      rotate: 360 
+                    }}
+                    transition={{ 
+                      duration: 3 + i, 
+                      repeat: Infinity, 
+                      ease: "linear" 
+                    }}
+                    className="absolute inset-0"
+                  >
+                    <motion.div 
+                      animate={{ 
+                        scale: [1, 1.5, 1],
+                        opacity: [0.3, 0.6, 0.3]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full shadow-[0_0_8px_white]"
+                    />
+                  </motion.div>
+                ))}
               </div>
-              
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1, duration: 1 }}
-                className="text-zinc-500 mt-6 text-xs tracking-[0.4em] uppercase font-mono"
-              >
-                Inicializando
-              </motion.p>
+
+              <div className="flex flex-col items-center gap-4">
+                <motion.h1 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl font-bold tracking-[0.5em] text-white uppercase"
+                >
+                  SAM
+                </motion.h1>
+                
+                <div className="flex items-center gap-2">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: 100 }}
+                    transition={{ duration: 1.5, ease: "easeInOut" }}
+                    className="h-[1px] bg-gradient-to-r from-transparent via-zinc-500 to-transparent"
+                  />
+                </div>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="text-[10px] font-medium text-zinc-500 tracking-[0.3em] uppercase"
+                >
+                  Neural Interface Active
+                </motion.p>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -374,7 +437,11 @@ export default function App() {
               <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5" /></button>
               <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-6 flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all"><Plus className="w-5 h-5" /> Nuevo Chat</button>
               
-              <div className="mt-auto mb-4">
+              <div className="mt-8 flex-1 overflow-y-auto pr-2 space-y-8 scrollbar-hide">
+                {/* Sidebar content simplified */}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/5">
                 <button onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all text-zinc-300">
                   <Settings className="w-5 h-5" /> Configuración
                 </button>
@@ -403,25 +470,94 @@ export default function App() {
                 <h2 className="text-xl font-semibold text-zinc-100 flex items-center gap-2"><Settings className="w-5 h-5"/> Configuración</h2>
                 <button onClick={() => setIsSettingsOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5"/></button>
               </div>
+
+              <div className="flex gap-1 p-1 bg-white/5 rounded-xl mb-6">
+                <button 
+                  onClick={() => setSettingsTab('general')}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${settingsTab === 'general' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  General
+                </button>
+                <button 
+                  onClick={() => setSettingsTab('updates')}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${settingsTab === 'updates' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  Actualizaciones
+                </button>
+              </div>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Personalidad de SAM</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['professional', 'sarcastic', 'programmer', 'friend'] as Personality[]).map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => {
-                          setPersonality(p);
-                          localStorage.setItem('sam_personality', p);
-                        }}
-                        className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${personality === p ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-[#1e1e1f] border-white/5 text-zinc-400 hover:bg-white/5'}`}
-                      >
-                        {p === 'professional' ? 'Profesional' : p === 'sarcastic' ? 'Sarcástico' : p === 'programmer' ? 'Programador' : 'Amigo'}
-                      </button>
-                    ))}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+                {settingsTab === 'general' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Personalidad de SAM</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['professional', 'sarcastic', 'programmer', 'friend'] as Personality[]).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => {
+                            setPersonality(p);
+                            localStorage.setItem('sam_personality', p);
+                          }}
+                          className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${personality === p ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-[#1e1e1f] border-white/5 text-zinc-400 hover:bg-white/5'}`}
+                        >
+                          {p === 'professional' ? 'Profesional' : p === 'sarcastic' ? 'Sarcástico' : p === 'programmer' ? 'Programador' : 'Amigo'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Future Updates Section */}
+                    <div>
+                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+                        <History className="w-3 h-3" /> Próximas Funciones
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          { name: "Modo Tutor", version: "1.0.00v", date: "19 marzo", active: true },
+                          { name: "Generar Cuestionarios", version: "1.0.40v", date: "19 marzo", active: true },
+                          { name: "Investigación Profunda", version: "1.0.20v", date: "20 marzo", active: false },
+                          { name: "Creación de Imágenes", version: "1.0.30v", date: "22 marzo", active: false },
+                          { name: "Búsqueda en Internet", version: "1.3.01v", date: "24 marzo", active: false },
+                          { name: "Generar Diapositivas/PDF", version: "1.07.1", date: "24 marzo", active: false },
+                        ].map((update, idx) => (
+                          <div key={idx} className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-1">
+                            <div className="flex justify-between items-center">
+                              <span className={`text-xs font-medium ${update.active ? 'text-zinc-200' : 'text-zinc-500'}`}>{update.name}</span>
+                              {update.active && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] font-mono text-zinc-600">
+                              <span>{update.version}</span>
+                              <span className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {update.date}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Usage Limits Section */}
+                    <div>
+                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+                        <ShieldCheck className="w-3 h-3" /> Límites de Uso
+                      </h3>
+                      <div className="grid gap-2">
+                        {[
+                          { name: "Generación de Imagen", limit: "12 tokens/día" },
+                          { name: "Cuestionarios", limit: "Sin límites" },
+                          { name: "Investigación Profunda", limit: "3 tokens/día" },
+                          { name: "Búsqueda en Internet", limit: "Sin límites" },
+                          { name: "Modo Tutor", limit: "Sin límites" },
+                          { name: "Diapositivas/PDF", limit: "5 tokens/día" },
+                        ].map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center px-3 py-2 rounded-xl hover:bg-white/[0.02] transition-colors">
+                            <span className="text-[11px] text-zinc-400">{item.name}</span>
+                            <span className="text-[10px] font-mono text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md">{item.limit}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -540,17 +676,55 @@ export default function App() {
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col relative z-10">
-        {/* Header */}
-        <header className="h-16 flex items-center justify-between px-4 lg:px-6">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><Menu className="w-6 h-6" /></button>
-          <h1 className="text-xl font-medium tracking-wide flex items-center gap-2 text-zinc-200">
-            SAM <Sparkles className="w-4 h-4 text-purple-400" />
-          </h1>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
+        {/* Precision Minimalist Floating Header */}
+        <header className="absolute top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="h-12 px-2 bg-[#0a0a0a]/40 backdrop-blur-2xl border border-white/10 rounded-full flex items-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto"
+          >
+            {/* Menu Button */}
+            <button 
+              onClick={() => setIsSidebarOpen(true)} 
+              className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+            {/* Brand Identity */}
+            <div className="flex items-center gap-3 px-2 cursor-default group">
+              <h1 className="text-sm font-semibold tracking-[0.2em] text-zinc-100">
+                SAM
+              </h1>
+              <div className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400/40 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500"></span>
+              </div>
+            </div>
+
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-white/10 flex items-center justify-center group cursor-pointer hover:border-white/20 transition-all overflow-hidden">
+                <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-100 transition-colors">S</span>
+              </div>
+            </div>
+          </motion.div>
         </header>
 
         {/* Chat Area / Canvas Area / Quiz Area */}
-        <main className="flex-1 overflow-hidden flex relative">
+        <main className="flex-1 overflow-hidden flex relative pt-20">
           {isGeneratingQuiz && (
             <motion.div 
               initial={{ opacity: 0 }}
@@ -942,31 +1116,104 @@ export default function App() {
             <AnimatePresence>
               {isPlusMenuOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute bottom-full right-0 mb-4 bg-[#1e1e1f]/95 backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-1 w-56 overflow-hidden"
+                  initial={{ opacity: 0, y: 15, scale: 0.95, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: 15, scale: 0.95, filter: "blur(10px)" }}
+                  transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                  className="absolute bottom-full left-0 mb-6 bg-[#131314]/90 backdrop-blur-2xl rounded-[2rem] p-4 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-[320px] overflow-hidden z-50"
                 >
-                  <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><ImageIcon className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
-                  <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
-                  <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
-                  <button type="button" onClick={() => { setIsQuizSetupOpen(true); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><HelpCircle className="w-5 h-5 text-yellow-400" /> Cuestionario</button>
-                  <div className="h-[1px] bg-white/5 my-1" />
-                  <button 
-                    type="button" 
-                    onClick={() => { setMode(mode === 'chat' ? 'canvas' : 'chat'); setIsPlusMenuOpen(false); }} 
-                    className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${mode === 'canvas' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-zinc-200'}`}
-                  >
-                    <Sparkles className="w-5 h-5" /> {mode === 'canvas' ? 'Desactivar Canvas' : 'Activar Canvas'}
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); setIsPlusMenuOpen(false); }} 
-                    className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isVoiceEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'hover:bg-white/5 text-zinc-200'}`}
-                  >
-                    <Volume2 className="w-5 h-5" /> {isVoiceEnabled ? 'Desactivar Voz' : 'Activar Voz'}
-                  </button>
+                  <div className="flex flex-col gap-4">
+                    {/* Media & Files Section */}
+                    <div>
+                      <div className="px-2 mb-3 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Herramientas</span>
+                        <div className="h-[1px] flex-1 bg-white/5 ml-4" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          type="button" 
+                          onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} 
+                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <ImageIcon className="w-5 h-5 text-blue-400" />
+                          </div>
+                          <span className="text-[11px] font-medium">Imagen</span>
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} 
+                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <File className="w-5 h-5 text-emerald-400" />
+                          </div>
+                          <span className="text-[11px] font-medium">Archivo</span>
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} 
+                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Camera className="w-5 h-5 text-purple-400" />
+                          </div>
+                          <span className="text-[11px] font-medium">Cámara</span>
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => { setIsQuizSetupOpen(true); setIsPlusMenuOpen(false); }} 
+                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <HelpCircle className="w-5 h-5 text-yellow-400" />
+                          </div>
+                          <span className="text-[11px] font-medium">Quiz</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Modes Section */}
+                    <div>
+                      <div className="px-2 mb-3 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Modos Especiales</span>
+                        <div className="h-[1px] flex-1 bg-white/5 ml-4" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button 
+                          type="button" 
+                          onClick={() => { setMode(mode === 'chat' ? 'canvas' : 'chat'); setIsPlusMenuOpen(false); }} 
+                          className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${mode === 'canvas' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05]'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${mode === 'canvas' ? 'bg-indigo-500/20' : 'bg-white/5'}`}>
+                              <Sparkles className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-medium">Modo Canvas</span>
+                          </div>
+                          <div className={`w-8 h-4 rounded-full relative transition-colors ${mode === 'canvas' ? 'bg-indigo-500' : 'bg-zinc-700'}`}>
+                            <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${mode === 'canvas' ? 'left-5' : 'left-1'}`} />
+                          </div>
+                        </button>
+
+                        <button 
+                          type="button" 
+                          onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); setIsPlusMenuOpen(false); }} 
+                          className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isVoiceEnabled ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05]'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${isVoiceEnabled ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                              <Volume2 className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-medium">Respuesta por Voz</span>
+                          </div>
+                          <div className={`w-8 h-4 rounded-full relative transition-colors ${isVoiceEnabled ? 'bg-emerald-500' : 'bg-zinc-700'}`}>
+                            <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${isVoiceEnabled ? 'left-5' : 'left-1'}`} />
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
