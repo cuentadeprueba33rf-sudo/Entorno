@@ -1,13 +1,25 @@
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useState, useRef, useEffect, FormEvent, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image, File, Camera, Sparkles } from "lucide-react";
+import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  image?: string; // base64 image
 }
+
+type Personality = "professional" | "sarcastic" | "programmer" | "friend";
+
+const PERSONALITY_PROMPTS = {
+  professional: "Eres SAM IA. Eres un asistente útil, directo y profesional. Responde de manera concisa y clara.",
+  sarcastic: "Eres SAM IA. Eres un asistente extremadamente sarcástico y un poco cínico, pero en el fondo ayudas. Usa humor negro y sarcasmo en tus respuestas.",
+  programmer: "Eres SAM IA. Eres un ingeniero de software senior. Hablas con jerga técnica, eres directo y te enfocas en la eficiencia y el código limpio.",
+  friend: "Eres SAM IA. Eres un amigo cercano, súper buena onda, usas emojis y lenguaje coloquial. Siempre estás ahí para apoyar."
+};
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,6 +29,10 @@ export default function App() {
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [showNotice, setShowNotice] = useState(false);
+  const [personality, setPersonality] = useState<Personality>("professional");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showSlashCommands, setShowSlashCommands] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -25,10 +41,23 @@ export default function App() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      localStorage.setItem('sam_chat_history', JSON.stringify(messages));
+    }
   }, [messages]);
 
   useEffect(() => {
     const hasSeenNotice = localStorage.getItem('sam_notice_seen');
+    const savedHistory = localStorage.getItem('sam_chat_history');
+    const savedPersonality = localStorage.getItem('sam_personality') as Personality;
+    
+    if (savedHistory) {
+      try { setMessages(JSON.parse(savedHistory)); } catch (e) {}
+    }
+    if (savedPersonality && PERSONALITY_PROMPTS[savedPersonality]) {
+      setPersonality(savedPersonality);
+    }
+
     // Simulate epic loading time
     const timer = setTimeout(() => {
       setIsAppLoading(false);
@@ -44,13 +73,46 @@ export default function App() {
     setShowNotice(false);
   };
 
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        setIsPlusMenuOpen(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    if (val === '/') {
+      setShowSlashCommands(true);
+    } else if (!val.startsWith('/')) {
+      setShowSlashCommands(false);
+    }
+  };
+
+  const handleSlashCommand = (cmd: string) => {
+    setInput(cmd + ' ');
+    setShowSlashCommands(false);
+    inputRef.current?.focus();
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && !selectedImage) || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback on send
+
+    const userMessage: Message = { role: "user", content: input, image: selectedImage || undefined };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput("");
+    setSelectedImage(null);
+    setShowSlashCommands(false);
     setIsLoading(true);
 
     try {
@@ -58,13 +120,21 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          messages: [...messages, userMessage]
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          personality: PERSONALITY_PROMPTS[personality]
         }),
       });
+      
+      if (!response.ok) throw new Error("Error en la respuesta del servidor");
+      
       const data = await response.json();
       setMessages((prev) => [...prev, { role: "assistant", content: data.choices[0].message.content }]);
+      
+      if (navigator.vibrate) navigator.vibrate([30, 50, 30]); // Haptic feedback on completion
+
     } catch (error) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Error al procesar la solicitud." }]);
+      console.error(error);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Error al procesar la solicitud con OpenRouter." }]);
     } finally {
       setIsLoading(false);
     }
@@ -193,8 +263,58 @@ export default function App() {
             <motion.div initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute z-50 h-full w-[280px] bg-[#131314]/95 backdrop-blur-xl border-r border-white/5 p-4 flex flex-col shadow-2xl">
               <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5" /></button>
               <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-6 flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all"><Plus className="w-5 h-5" /> Nuevo Chat</button>
+              
+              <div className="mt-auto mb-4">
+                <button onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all text-zinc-300">
+                  <Settings className="w-5 h-5" /> Configuración
+                </button>
+              </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#131314] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-zinc-100 flex items-center gap-2"><Settings className="w-5 h-5"/> Configuración</h2>
+                <button onClick={() => setIsSettingsOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5"/></button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Personalidad de SAM</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['professional', 'sarcastic', 'programmer', 'friend'] as Personality[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setPersonality(p);
+                          localStorage.setItem('sam_personality', p);
+                        }}
+                        className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${personality === p ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-[#1e1e1f] border-white/5 text-zinc-400 hover:bg-white/5'}`}
+                      >
+                        {p === 'professional' ? 'Profesional' : p === 'sarcastic' ? 'Sarcástico' : p === 'programmer' ? 'Programador' : 'Amigo'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -230,8 +350,33 @@ export default function App() {
                 {messages.map((msg, i) => (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                     <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
+                      {msg.image && (
+                        <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
+                          <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+                        </div>
+                      )}
                       <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            code({node, inline, className, children, ...props}: any) {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  {...props}
+                                  children={String(children).replace(/\n$/, '')}
+                                  style={vscDarkPlus}
+                                  language={match[1]}
+                                  PreTag="div"
+                                />
+                              ) : (
+                                <code {...props} className={className}>
+                                  {children}
+                                </code>
+                              )
+                            }
+                          }}
+                        >
                           {msg.content}
                         </ReactMarkdown>
                       </div>
@@ -252,11 +397,50 @@ export default function App() {
         {/* Input Area (Gemini style bottom sheet) */}
         <div className="absolute bottom-0 left-0 right-0 bg-[#131314] rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] p-4 md:p-6 z-20">
           <div className="max-w-3xl mx-auto relative">
+            
+            {/* Slash Commands */}
+            <AnimatePresence>
+              {showSlashCommands && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute bottom-full left-4 mb-2 bg-[#1e1e1f] border border-white/10 rounded-xl shadow-xl overflow-hidden w-64 z-50"
+                >
+                  <div className="p-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Comandos</div>
+                  <button type="button" onClick={() => handleSlashCommand('/resumir')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><File className="w-4 h-4 text-blue-400"/> Resumir texto</button>
+                  <button type="button" onClick={() => handleSlashCommand('/explicar')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-400"/> Explicar concepto</button>
+                  <button type="button" onClick={() => handleSlashCommand('/codigo')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><Pencil className="w-4 h-4 text-purple-400"/> Escribir código</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Image Preview */}
+            <AnimatePresence>
+              {selectedImage && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="relative w-24 h-24 mb-4 rounded-xl overflow-hidden border border-white/10 ml-4"
+                >
+                  <img src={selectedImage} alt="Selected" className="w-full h-full object-cover" />
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute top-1 right-1 bg-black/50 p-1 rounded-full hover:bg-black/80 text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <form onSubmit={handleSubmit} className="flex flex-col gap-2">
               <input
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 className="w-full bg-transparent px-4 py-2 outline-none text-zinc-100 placeholder:text-zinc-500 text-lg"
                 placeholder="Pregúntale a SAM"
               />
@@ -275,7 +459,7 @@ export default function App() {
                         transition={{ duration: 0.15 }}
                         className="absolute bottom-full left-0 mb-4 bg-[#1e1e1f]/95 backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-1 w-56 overflow-hidden"
                       >
-                        <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Image className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
+                        <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><ImageIcon className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
                         <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
                         <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
                       </motion.div>
@@ -285,15 +469,15 @@ export default function App() {
 
                 <button
                   type="submit"
-                  disabled={!input.trim() || isLoading}
+                  disabled={(!input.trim() && !selectedImage) || isLoading}
                   className="p-3 bg-white/10 text-zinc-300 rounded-full hover:bg-white/20 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Send className="w-5 h-5" />
                 </button>
               </div>
             </form>
-            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => console.log(e.target.files)} />
-            <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" className="hidden" onChange={(e) => console.log(e.target.files)} />
+            <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
+            <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
           </div>
         </div>
       </div>

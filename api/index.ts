@@ -40,7 +40,7 @@ app.post("/api/chat", async (req, res) => {
         body: JSON.stringify({
           model: model,
           messages: [
-            { role: "system", content: "Tu nombre es SAM IA. Eres un asistente útil y directo. Responde de manera concisa y no muestres procesos de razonamiento." },
+            { role: "system", content: req.body.personality || "Tu nombre es SAM IA. Eres un asistente útil y directo. Responde de manera concisa y no muestres procesos de razonamiento." },
             ...messages
           ],
           reasoning: { enabled: true }
