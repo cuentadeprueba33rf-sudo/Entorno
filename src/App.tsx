@@ -40,8 +40,14 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || errorData.error || "Failed to get response");
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || errorData.error || "Failed to get response");
+        } else {
+          const errorText = await response.text();
+          throw new Error(errorText || "Failed to get response");
+        }
       }
 
       const data = await response.json();
