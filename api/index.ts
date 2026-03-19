@@ -25,13 +25,16 @@ app.post("/api/chat", async (req, res) => {
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": process.env.APP_URL || "http://localhost:3000", // Required by OpenRouter
-        "X-Title": "Nemotron Reasoning Chat", // Optional for OpenRouter
+        "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+        "X-Title": "SAM IA",
       },
       body: JSON.stringify({
         model: "stepfun/step-3.5-flash:free",
-        messages: messages,
-        reasoning: { enabled: true }
+        messages: [
+          { role: "system", content: "Tu nombre es SAM IA. Eres un asistente útil y directo. Responde de manera concisa y no muestres procesos de razonamiento." },
+          ...messages
+        ],
+        reasoning: { enabled: false }
       }),
     });
 

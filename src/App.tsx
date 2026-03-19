@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Send, Bot, User, Loader2, BrainCircuit, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -72,33 +72,27 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-[#0a0a0a] text-zinc-100 font-sans">
       {/* Header */}
-      <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10">
+      <header className="border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-            <Sparkles className="w-6 h-6 text-emerald-400" />
+          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
+            <Bot className="w-5 h-5 text-zinc-300" />
           </div>
-          <div>
-            <h1 className="font-semibold text-lg tracking-tight">Nemotron Reasoning</h1>
-            <p className="text-xs text-zinc-500 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              stepfun/step-3.5-flash:free
-            </p>
-          </div>
+          <h1 className="font-semibold text-base tracking-tight text-zinc-200">SAM IA</h1>
+        </div>
+        <div className="text-xs text-zinc-500 font-medium bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
+          Nemotron 3.5
         </div>
       </header>
 
       {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-3xl mx-auto space-y-8">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mb-4">
-                <Bot className="w-8 h-8 text-zinc-400" />
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
+              <div className="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-800">
+                <Bot className="w-10 h-10 text-zinc-400" />
               </div>
-              <h2 className="text-2xl font-bold text-white">¿En qué puedo ayudarte hoy?</h2>
-              <p className="text-zinc-500 max-w-md">
-                Este chat utiliza el modelo Nemotron con capacidades de razonamiento avanzadas a través de OpenRouter.
-              </p>
+              <h2 className="text-3xl font-semibold text-zinc-100">¿En qué puedo ayudarte hoy?</h2>
             </div>
           )}
 
@@ -108,32 +102,19 @@ export default function App() {
                 key={idx}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                className={`flex gap-4 ${msg.role === "user" ? "justify-end" : ""}`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                  msg.role === "user" 
-                    ? "bg-zinc-800 border-zinc-700" 
-                    : "bg-emerald-500/10 border-emerald-500/20"
-                }`}>
-                  {msg.role === "user" ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5 text-emerald-400" />}
-                </div>
+                {msg.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-700">
+                    <Bot className="w-5 h-5 text-zinc-300" />
+                  </div>
+                )}
                 
-                <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === "user" ? "items-end" : ""}`}>
-                  {msg.reasoning_details && (
-                    <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 text-sm text-zinc-400 font-mono">
-                      <div className="flex items-center gap-2 mb-2 text-zinc-500 uppercase tracking-widest text-[10px] font-bold">
-                        <BrainCircuit className="w-3 h-3" />
-                        Pensamiento del Modelo
-                      </div>
-                      {typeof msg.reasoning_details === 'string' 
-                        ? msg.reasoning_details 
-                        : (msg.reasoning_details.text || JSON.stringify(msg.reasoning_details))}
-                    </div>
-                  )}
+                <div className={`flex flex-col gap-2 max-w-[80%] ${msg.role === "user" ? "items-end" : ""}`}>
                   <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
                     msg.role === "user" 
-                      ? "bg-emerald-600 text-white rounded-tr-none" 
-                      : "bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-none"
+                      ? "bg-zinc-800 text-zinc-100" 
+                      : "text-zinc-200"
                   }`}>
                     {msg.content}
                   </div>
@@ -148,16 +129,10 @@ export default function App() {
               animate={{ opacity: 1 }}
               className="flex gap-4"
             >
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
+              <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
               </div>
-              <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl rounded-tl-none">
-                <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce"></span>
-                  <span className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                  <span className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                </div>
-              </div>
+              <div className="text-zinc-500 p-4 text-sm">SAM IA está pensando...</div>
             </motion.div>
           )}
           <div ref={messagesEndRef} />
@@ -165,26 +140,26 @@ export default function App() {
       </main>
 
       {/* Input Area */}
-      <footer className="p-4 md:p-6 bg-gradient-to-t from-[#0a0a0a] to-transparent">
+      <footer className="p-4 md:p-6 bg-[#0a0a0a]">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto relative">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe un mensaje..."
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 pl-6 pr-14 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+            placeholder="Preguntar a SAM IA..."
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-4 pl-6 pr-16 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600 text-zinc-200"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-lg bg-zinc-700 text-zinc-200 flex items-center justify-center hover:bg-zinc-600 disabled:opacity-50 transition-colors"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 h-4" />
           </button>
         </form>
-        <p className="text-[10px] text-center text-zinc-600 mt-4 uppercase tracking-widest font-medium">
-          Powered by OpenRouter & Nvidia Nemotron
+        <p className="text-[10px] text-center text-zinc-700 mt-4">
+          SAM IA puede cometer errores. Considera verificar la información importante.
         </p>
       </footer>
     </div>
