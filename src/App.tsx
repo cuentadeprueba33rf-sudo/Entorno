@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check } from "lucide-react";
+import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -35,6 +35,8 @@ export default function App() {
   const [showSlashCommands, setShowSlashCommands] = useState(false);
   const [mode, setMode] = useState<'chat' | 'canvas'>('chat');
   const [canvasCode, setCanvasCode] = useState<string>("");
+  const [canvasView, setCanvasView] = useState<'chat' | 'preview'>('preview');
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -137,16 +139,19 @@ export default function App() {
       const assistantContent = data.choices[0].message.content;
 
       if (mode === 'canvas') {
-        // Extract code from markdown if present, otherwise take full content
         const codeMatch = assistantContent.match(/```(?:html|javascript|typescript|css|jsx|tsx)?\n([\s\S]*?)```/) || 
                           assistantContent.match(/```([\s\S]*?)```/);
         const extractedCode = codeMatch ? codeMatch[1] : assistantContent;
         setCanvasCode(extractedCode);
-        
-        // Add a minimal message to chat to indicate generation
         setMessages((prev) => [...prev, { role: "assistant", content: "✨ Código generado en el Sandbox." }]);
+        if (window.innerWidth < 768) setCanvasView('preview');
       } else {
         setMessages((prev) => [...prev, { role: "assistant", content: assistantContent }]);
+        if (isVoiceEnabled) {
+          const utterance = new SpeechSynthesisUtterance(assistantContent);
+          utterance.lang = 'es-ES';
+          window.speechSynthesis.speak(utterance);
+        }
       }
       
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]); // Haptic feedback on completion
@@ -348,9 +353,9 @@ export default function App() {
         </header>
 
         {/* Chat Area / Canvas Area */}
-        <main className="flex-1 overflow-hidden flex">
+        <main className="flex-1 overflow-hidden flex relative">
           {/* Chat */}
-          <div className={`flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide ${mode === 'canvas' ? 'hidden md:block md:w-1/3' : ''}`}>
+          <div className={`flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide transition-all duration-500 ${mode === 'canvas' ? (canvasView === 'preview' ? 'hidden md:block md:w-1/3 opacity-50' : 'w-full md:w-1/3') : 'w-full'}`}>
             <div className="max-w-3xl mx-auto h-full flex flex-col">
               {messages.length === 0 ? (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
@@ -369,7 +374,13 @@ export default function App() {
               ) : (
                 <div className="space-y-8">
                   {messages.map((msg, i) => (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20, filter: "blur(10px)" }} 
+                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} 
+                      transition={{ duration: 0.6, ease: "easeOut", delay: msg.role === 'assistant' ? 0.1 : 0 }}
+                      key={i} 
+                      className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}
+                    >
                       <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
                         {msg.image && (
                           <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
@@ -406,7 +417,12 @@ export default function App() {
                   ))}
                   {isLoading && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
-                      <span className="animate-pulse text-sm">SAM está pensando...</span>
+                      <div className="flex gap-1">
+                        <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                      </div>
+                      <span className="text-xs font-mono tracking-widest uppercase opacity-50">Procesando</span>
                     </motion.div>
                   )}
                   <div ref={messagesEndRef} className="h-4" />
@@ -417,12 +433,23 @@ export default function App() {
           
           {/* Canvas */}
           {mode === 'canvas' && (
-            <div className="flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col">
+            <div className={`flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col transition-all duration-500 ${canvasView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-medium text-zinc-200 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-purple-400" /> Sandbox
                 </h2>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      const blob = new Blob([canvasCode], { type: 'text/html' });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank');
+                    }}
+                    className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
+                    title="Abrir en nueva pestaña"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
                   <button 
                     onClick={() => setCanvasCode("")}
                     className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
@@ -445,7 +472,7 @@ export default function App() {
                           <meta charset="utf-8">
                           <meta name="viewport" content="width=device-width, initial-scale=1">
                           <script src="https://cdn.tailwindcss.com"></script>
-                          <style>body { font-family: sans-serif; }</style>
+                          <style>body { font-family: sans-serif; margin: 0; padding: 20px; }</style>
                         </head>
                         <body>
                           ${canvasCode.includes('<script') || canvasCode.includes('<style') ? canvasCode : `<div>${canvasCode}</div>`}
@@ -465,6 +492,24 @@ export default function App() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Mobile View Toggle */}
+          {mode === 'canvas' && (
+            <div className="md:hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex bg-[#1e1e1f] border border-white/10 rounded-full p-1 shadow-2xl">
+              <button 
+                onClick={() => setCanvasView('chat')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${canvasView === 'chat' ? 'bg-white text-black' : 'text-zinc-400'}`}
+              >
+                <Bot className="w-4 h-4" /> Chat
+              </button>
+              <button 
+                onClick={() => setCanvasView('preview')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${canvasView === 'preview' ? 'bg-white text-black' : 'text-zinc-400'}`}
+              >
+                <Layout className="w-4 h-4" /> Preview
+              </button>
             </div>
           )}
         </main>
@@ -552,6 +597,13 @@ export default function App() {
                     className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${mode === 'canvas' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-zinc-200'}`}
                   >
                     <Sparkles className="w-5 h-5" /> {mode === 'canvas' ? 'Desactivar Canvas' : 'Activar Canvas'}
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); setIsPlusMenuOpen(false); }} 
+                    className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isVoiceEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'hover:bg-white/5 text-zinc-200'}`}
+                  >
+                    <Volume2 className="w-5 h-5" /> {isVoiceEnabled ? 'Desactivar Voz' : 'Activar Voz'}
                   </button>
                 </motion.div>
               )}
