@@ -59,7 +59,7 @@ export default function App() {
   ];
 
   return (
-    <div className="flex h-screen bg-[#000000] text-zinc-100 font-sans overflow-hidden selection:bg-purple-500/30 relative">
+    <div className="flex h-[100dvh] bg-[#000000] text-zinc-100 font-sans overflow-hidden selection:bg-purple-500/30 relative">
       {/* Subtle futuristic background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-900/10 blur-[120px] rounded-full pointer-events-none" />
 
@@ -87,7 +87,7 @@ export default function App() {
         </header>
 
         {/* Chat Area */}
-        <main className="flex-1 overflow-y-auto p-4 pb-40 scroll-smooth">
+        <main className="flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide">
           <div className="max-w-3xl mx-auto h-full flex flex-col">
             {messages.length === 0 ? (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
