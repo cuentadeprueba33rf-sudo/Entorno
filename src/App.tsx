@@ -107,12 +107,7 @@ export default function App() {
               <div className="space-y-8">
                 {messages.map((msg, i) => (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                    {msg.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30 shrink-0 mt-1">
-                        <Sparkles className="w-4 h-4 text-purple-400" />
-                      </div>
-                    )}
-                    <div className={`p-4 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm' : 'bg-transparent text-zinc-200'}`}>
+                    <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
                       <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {msg.content}
@@ -122,10 +117,7 @@ export default function App() {
                   </motion.div>
                 ))}
                 {isLoading && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500/10 to-blue-500/10 flex items-center justify-center border border-purple-500/20 shrink-0">
-                      <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-                    </div>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
                     <span className="animate-pulse text-sm">SAM está pensando...</span>
                   </motion.div>
                 )}
