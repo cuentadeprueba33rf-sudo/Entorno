@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send } from "lucide-react";
+import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image, File, Camera } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -14,9 +14,12 @@ export default function App() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,7 +38,9 @@ export default function App() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ 
+          messages: [...messages, userMessage]
+        }),
       });
       const data = await response.json();
       setMessages((prev) => [...prev, { role: "assistant", content: data.choices[0].message.content }]);
@@ -105,11 +110,24 @@ export default function App() {
         </main>
 
         {/* Input Area */}
-        <div className="p-4">
+        <div className="p-4 relative">
           <form onSubmit={handleSubmit} className="max-w-2xl mx-auto bg-zinc-900 rounded-full flex items-center p-2 border border-zinc-700">
+            <button type="button" onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} className="p-3 text-zinc-400 hover:text-white"><Plus /></button>
             <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} className="flex-1 bg-transparent p-4 outline-none" placeholder="Pregúntale a SAM" />
             <button type="submit" className="p-3 bg-white text-black rounded-full"><Send /></button>
           </form>
+
+          <AnimatePresence>
+            {isPlusMenuOpen && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-zinc-800 rounded-2xl p-2 border border-zinc-700 flex flex-col gap-1 w-48">
+                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 hover:bg-zinc-700 rounded-xl"><Image className="w-5 h-5" /> Subir Imagen</button>
+                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 hover:bg-zinc-700 rounded-xl"><File className="w-5 h-5" /> Subir Archivo</button>
+                <button onClick={() => cameraInputRef.current?.click()} className="flex items-center gap-3 p-3 hover:bg-zinc-700 rounded-xl"><Camera className="w-5 h-5" /> Abrir Cámara</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => console.log(e.target.files)} />
+          <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" className="hidden" onChange={(e) => console.log(e.target.files)} />
         </div>
       </div>
     </div>
