@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image, File, Camera } from "lucide-react";
+import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image, File, Camera, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -59,75 +59,128 @@ export default function App() {
   ];
 
   return (
-    <div className="flex h-screen bg-black text-white font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#000000] text-zinc-100 font-sans overflow-hidden selection:bg-purple-500/30 relative">
+      {/* Subtle futuristic background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-900/10 blur-[120px] rounded-full pointer-events-none" />
+
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.div initial={{ x: -260 }} animate={{ x: 0 }} exit={{ x: -260 }} className="w-[260px] bg-zinc-950 border-r border-zinc-800 p-4 flex flex-col">
-            <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-zinc-800 rounded-lg"><X /></button>
-            <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-4 flex items-center gap-2 p-2 hover:bg-zinc-800 rounded-lg">Nuevo Chat</button>
-          </motion.div>
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/60 z-40 backdrop-blur-sm" />
+            <motion.div initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="absolute z-50 h-full w-[280px] bg-[#131314]/95 backdrop-blur-xl border-r border-white/5 p-4 flex flex-col shadow-2xl">
+              <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-white/10 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-6 flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all"><Plus className="w-5 h-5" /> Nuevo Chat</button>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative z-10">
         {/* Header */}
-        <header className="h-16 flex items-center justify-between px-4">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-zinc-800 rounded-lg"><Menu /></button>
-          <h1 className="text-xl font-semibold">SAM</h1>
-          <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center">S</div>
+        <header className="h-16 flex items-center justify-between px-4 lg:px-6">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><Menu className="w-6 h-6" /></button>
+          <h1 className="text-xl font-medium tracking-wide flex items-center gap-2 text-zinc-200">
+            SAM <Sparkles className="w-4 h-4 text-purple-400" />
+          </h1>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
         </header>
 
         {/* Chat Area */}
-        <main className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-2xl mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 pb-40 scroll-smooth">
+          <div className="max-w-3xl mx-auto h-full flex flex-col">
             {messages.length === 0 ? (
-              <div className="mt-20">
-                <h2 className="text-4xl font-medium mb-12">Hola, Sam<br/><span className="text-zinc-500">¿Por dónde empezamos?</span></h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
+                <h2 className="text-3xl md:text-4xl font-medium mb-2 text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">Hola, Sam</h2>
+                <h1 className="text-4xl md:text-5xl font-semibold mb-12 text-zinc-100 tracking-tight">
+                  ¿Por dónde empezamos?
+                </h1>
+                <div className="flex flex-col items-start gap-3">
                   {suggestions.map((s, i) => (
-                    <button key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-zinc-900 p-4 rounded-2xl hover:bg-zinc-800 text-left">
-                      {s.icon} {s.text}
-                    </button>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20">
+                      {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
+                    </motion.button>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                    {msg.role === 'assistant' && <Bot className="w-8 h-8 mt-1" />}
-                    <div className={`p-4 rounded-2xl ${msg.role === 'user' ? 'bg-zinc-800' : ''}`}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30 shrink-0 mt-1">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                      </div>
+                    )}
+                    <div className={`p-4 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm' : 'bg-transparent text-zinc-200'}`}>
+                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-                {isLoading && <div className="text-zinc-500">SAM está pensando...</div>}
-                <div ref={messagesEndRef} />
+                {isLoading && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500/10 to-blue-500/10 flex items-center justify-center border border-purple-500/20 shrink-0">
+                      <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
+                    </div>
+                    <span className="animate-pulse text-sm">SAM está pensando...</span>
+                  </motion.div>
+                )}
+                <div ref={messagesEndRef} className="h-4" />
               </div>
             )}
           </div>
         </main>
 
-        {/* Input Area */}
-        <div className="p-4 relative">
-          <form onSubmit={handleSubmit} className="max-w-2xl mx-auto bg-zinc-900 rounded-full flex items-center p-2 border border-zinc-700">
-            <button type="button" onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} className="p-3 text-zinc-400 hover:text-white"><Plus /></button>
-            <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} className="flex-1 bg-transparent p-4 outline-none" placeholder="Pregúntale a SAM" />
-            <button type="submit" className="p-3 bg-white text-black rounded-full"><Send /></button>
-          </form>
+        {/* Input Area (Gemini style bottom sheet) */}
+        <div className="absolute bottom-0 left-0 right-0 bg-[#131314] rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] p-4 md:p-6 z-20">
+          <div className="max-w-3xl mx-auto relative">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full bg-transparent px-4 py-2 outline-none text-zinc-100 placeholder:text-zinc-500 text-lg"
+                placeholder="Pregúntale a SAM"
+              />
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-1 relative">
+                  <button type="button" onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} className="p-3 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-full transition-colors">
+                    <Plus className="w-6 h-6" />
+                  </button>
 
-          <AnimatePresence>
-            {isPlusMenuOpen && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-zinc-800 rounded-2xl p-2 border border-zinc-700 flex flex-col gap-1 w-48">
-                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 hover:bg-zinc-700 rounded-xl"><Image className="w-5 h-5" /> Subir Imagen</button>
-                <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 p-3 hover:bg-zinc-700 rounded-xl"><File className="w-5 h-5" /> Subir Archivo</button>
-                <button onClick={() => cameraInputRef.current?.click()} className="flex items-center gap-3 p-3 hover:bg-zinc-700 rounded-xl"><Camera className="w-5 h-5" /> Abrir Cámara</button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => console.log(e.target.files)} />
-          <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" className="hidden" onChange={(e) => console.log(e.target.files)} />
+                  <AnimatePresence>
+                    {isPlusMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute bottom-full left-0 mb-4 bg-[#1e1e1f]/95 backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-1 w-56 overflow-hidden"
+                      >
+                        <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Image className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
+                        <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
+                        <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isLoading}
+                  className="p-3 bg-white/10 text-zinc-300 rounded-full hover:bg-white/20 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+            </form>
+            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => console.log(e.target.files)} />
+            <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" className="hidden" onChange={(e) => console.log(e.target.files)} />
+          </div>
         </div>
       </div>
     </div>
