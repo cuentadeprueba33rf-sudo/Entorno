@@ -33,6 +33,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showSlashCommands, setShowSlashCommands] = useState(false);
+  const [mode, setMode] = useState<'chat' | 'canvas'>('chat');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -325,73 +326,103 @@ export default function App() {
           <h1 className="text-xl font-medium tracking-wide flex items-center gap-2 text-zinc-200">
             SAM <Sparkles className="w-4 h-4 text-purple-400" />
           </h1>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setMode(mode === 'chat' ? 'canvas' : 'chat')}
+              className={`p-2 rounded-full transition-colors ${mode === 'canvas' ? 'bg-indigo-500/20 text-indigo-400' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'}`}
+            >
+              {mode === 'chat' ? <Zap className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
+            </button>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
+          </div>
         </header>
 
-        {/* Chat Area */}
-        <main className="flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide">
-          <div className="max-w-3xl mx-auto h-full flex flex-col">
-            {messages.length === 0 ? (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
-                <h2 className="text-3xl md:text-4xl font-medium mb-2 text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">Hola, Sam</h2>
-                <h1 className="text-4xl md:text-5xl font-semibold mb-12 text-zinc-100 tracking-tight">
-                  ¿Por dónde empezamos?
-                </h1>
-                <div className="flex flex-col items-start gap-3">
-                  {suggestions.map((s, i) => (
-                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20">
-                      {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
-                    </motion.button>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <div className="space-y-8">
-                {messages.map((msg, i) => (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                    <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
-                      {msg.image && (
-                        <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
-                          <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+        {/* Chat Area / Canvas Area */}
+        <main className="flex-1 overflow-hidden flex">
+          {/* Chat */}
+          <div className={`flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide ${mode === 'canvas' ? 'hidden md:block md:w-1/3' : ''}`}>
+            <div className="max-w-3xl mx-auto h-full flex flex-col">
+              {messages.length === 0 ? (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
+                  <h2 className="text-3xl md:text-4xl font-medium mb-2 text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">Hola, Sam</h2>
+                  <h1 className="text-4xl md:text-5xl font-semibold mb-12 text-zinc-100 tracking-tight">
+                    ¿Por dónde empezamos?
+                  </h1>
+                  <div className="flex flex-col items-start gap-3">
+                    {suggestions.map((s, i) => (
+                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20">
+                        {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="space-y-8">
+                  {messages.map((msg, i) => (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                      <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
+                        {msg.image && (
+                          <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
+                            <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+                          </div>
+                        )}
+                        <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code({node, inline, className, children, ...props}: any) {
+                                const match = /language-(\w+)/.exec(className || '')
+                                return !inline && match ? (
+                                  <SyntaxHighlighter
+                                    {...props}
+                                    children={String(children).replace(/\n$/, '')}
+                                    style={vscDarkPlus}
+                                    language={match[1]}
+                                    PreTag="div"
+                                  />
+                                ) : (
+                                  <code {...props} className={className}>
+                                    {children}
+                                  </code>
+                                )
+                              }
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
                         </div>
-                      )}
-                      <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            code({node, inline, className, children, ...props}: any) {
-                              const match = /language-(\w+)/.exec(className || '')
-                              return !inline && match ? (
-                                <SyntaxHighlighter
-                                  {...props}
-                                  children={String(children).replace(/\n$/, '')}
-                                  style={vscDarkPlus}
-                                  language={match[1]}
-                                  PreTag="div"
-                                />
-                              ) : (
-                                <code {...props} className={className}>
-                                  {children}
-                                </code>
-                              )
-                            }
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-                {isLoading && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
-                    <span className="animate-pulse text-sm">SAM está pensando...</span>
-                  </motion.div>
-                )}
-                <div ref={messagesEndRef} className="h-4" />
-              </div>
-            )}
+                    </motion.div>
+                  ))}
+                  {isLoading && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
+                      <span className="animate-pulse text-sm">SAM está pensando...</span>
+                    </motion.div>
+                  )}
+                  <div ref={messagesEndRef} className="h-4" />
+                </div>
+              )}
+            </div>
           </div>
+          
+          {/* Canvas */}
+          {mode === 'canvas' && (
+            <div className="flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-zinc-200">Sandbox</h2>
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                </div>
+              </div>
+              <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl">
+                <div className="w-full h-full flex items-center justify-center text-zinc-500">
+                  <p>El código generado aparecerá aquí.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
 
         {/* Input Area (Professional Elongated Bar) */}
