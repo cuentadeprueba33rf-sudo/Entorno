@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout } from "lucide-react";
+import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout, HelpCircle, Trophy, ArrowRight, RotateCcw, LogOut } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface Message {
   role: "user" | "assistant";
@@ -12,7 +13,15 @@ interface Message {
   image?: string; // base64 image
 }
 
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+}
+
 type Personality = "professional" | "sarcastic" | "programmer" | "friend";
+type AppMode = 'chat' | 'canvas' | 'quiz';
 
 const PERSONALITY_PROMPTS = {
   professional: "Eres SAM IA. Eres un asistente útil, directo y profesional. Responde de manera concisa y clara.",
@@ -33,10 +42,21 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showSlashCommands, setShowSlashCommands] = useState(false);
-  const [mode, setMode] = useState<'chat' | 'canvas'>('chat');
+  const [mode, setMode] = useState<AppMode>('chat');
   const [canvasCode, setCanvasCode] = useState<string>("");
   const [canvasView, setCanvasView] = useState<'chat' | 'preview'>('preview');
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+
+  // Quiz State
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<number[]>([]);
+  const [isQuizFinished, setIsQuizFinished] = useState(false);
+  const [quizTopic, setQuizTopic] = useState("");
+  const [quizQuestionCount, setQuizQuestionCount] = useState(5);
+  const [isExitQuizModalOpen, setIsExitQuizModalOpen] = useState(false);
+  const [isQuizSetupOpen, setIsQuizSetupOpen] = useState(false);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +125,59 @@ export default function App() {
     inputRef.current?.focus();
   };
 
+  const generateQuiz = async (topic: string, count: number) => {
+    setQuizTopic(topic);
+    setIsGeneratingQuiz(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Eres un experto en educación. Genera un cuestionario de alta calidad con ${count} preguntas sobre el tema: "${topic}". 
+        Las preguntas deben ser desafiantes pero justas, de opción múltiple con exactamente 4 opciones cada una.
+        Asegúrate de que solo una opción sea correcta.
+        Incluye una explicación detallada de por qué la respuesta es correcta para ayudar al aprendizaje.
+        Responde estrictamente en formato JSON con la siguiente estructura:
+        [{ "question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": 0, "explanation": "..." }]`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                question: { type: Type.STRING },
+                options: { 
+                  type: Type.ARRAY, 
+                  items: { type: Type.STRING },
+                  description: "4 opciones de respuesta"
+                },
+                correctAnswer: { 
+                  type: Type.INTEGER,
+                  description: "Índice de la respuesta correcta (0-3)"
+                },
+                explanation: { type: Type.STRING }
+              },
+              required: ["question", "options", "correctAnswer", "explanation"]
+            }
+          }
+        }
+      });
+
+      const questions = JSON.parse(response.text);
+      setQuizQuestions(questions);
+      setQuizTopic(topic);
+      setCurrentQuestionIndex(0);
+      setUserAnswers([]);
+      setIsQuizFinished(false);
+      setMode('quiz');
+    } catch (error) {
+      console.error("Error generating quiz:", error);
+      setMessages(prev => [...prev, { role: "assistant", content: "Lo siento, no pude generar el cuestionario en este momento. Inténtalo de nuevo." }]);
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && !selectedImage) || isLoading) return;
@@ -114,10 +187,22 @@ export default function App() {
     const userMessage: Message = { role: "user", content: input, image: selectedImage || undefined };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
+    const currentInput = input;
     setInput("");
     setSelectedImage(null);
     setShowSlashCommands(false);
     setIsLoading(true);
+
+    // Check for Quiz trigger
+    if (currentInput.toLowerCase().includes('cuestionario') || currentInput.toLowerCase().includes('quiz')) {
+      // Try to extract topic and count
+      const countMatch = currentInput.match(/(\d+)\s*preguntas/i);
+      const count = countMatch ? parseInt(countMatch[1]) : 5;
+      const topic = currentInput.replace(/cuestionario|quiz|\d+\s*preguntas/gi, '').trim() || "Cultura General";
+      
+      await generateQuiz(topic, count);
+      return;
+    }
 
     try {
       const systemPrompt = mode === 'canvas' 
@@ -168,6 +253,7 @@ export default function App() {
     { icon: <BookOpen className="w-5 h-5 text-emerald-400" />, text: "Ayúdame a aprender", action: "Explícame un tema complejo" },
     { icon: <Zap className="w-5 h-5 text-yellow-400" />, text: "Potencia mi día", action: "Dame consejos de productividad" },
     { icon: <Pencil className="w-5 h-5 text-purple-400" />, text: "Escribe algo", action: "Escribe un ensayo sobre..." },
+    { icon: <Trophy className="w-5 h-5 text-yellow-400" />, text: "Hazme un cuestionario", action: "Cuestionario de 5 preguntas sobre cultura general" },
     { icon: <Calculator className="w-5 h-5 text-blue-400" />, text: "Math Solver", action: "Resuelve este problema matemático: " },
   ];
 
@@ -342,6 +428,117 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Exit Quiz Confirmation Modal */}
+      <AnimatePresence>
+        {isExitQuizModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#131314] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <h2 className="text-xl font-semibold text-zinc-100 mb-4">¿Salir del cuestionario?</h2>
+              <p className="text-zinc-400 mb-6">Perderás todo tu progreso actual en este cuestionario.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsExitQuizModalOpen(false)}
+                  className="flex-1 py-3 bg-zinc-800 text-zinc-100 rounded-xl font-medium hover:bg-zinc-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    setMode('chat');
+                    setIsExitQuizModalOpen(false);
+                    setQuizQuestions([]);
+                  }}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+                >
+                  Salir
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Quiz Setup Modal */}
+      <AnimatePresence>
+        {isQuizSetupOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#131314] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5 text-purple-400" /> Nuevo Cuestionario
+                </h2>
+                <button onClick={() => setIsQuizSetupOpen(false)} className="text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Tema del cuestionario</label>
+                  <input 
+                    type="text"
+                    value={quizTopic}
+                    onChange={(e) => setQuizTopic(e.target.value)}
+                    placeholder="Ej: Historia, Ciencia, Cine..."
+                    className="w-full bg-[#1e1e1f] border border-white/5 rounded-xl p-3 text-zinc-100 outline-none focus:border-purple-500/50 transition-all"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Número de preguntas: {quizQuestionCount}</label>
+                  <input 
+                    type="range"
+                    min="3"
+                    max="15"
+                    step="1"
+                    value={quizQuestionCount}
+                    onChange={(e) => setQuizQuestionCount(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-purple-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-zinc-500 mt-1 font-mono">
+                    <span>3</span>
+                    <span>15</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    if (quizTopic.trim()) {
+                      generateQuiz(quizTopic, quizQuestionCount);
+                      setIsQuizSetupOpen(false);
+                    }
+                  }}
+                  disabled={!quizTopic.trim() || isLoading}
+                  className="w-full py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                >
+                  {isLoading ? 'Generando...' : 'Comenzar Cuestionario'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex-1 flex flex-col relative z-10">
         {/* Header */}
         <header className="h-16 flex items-center justify-between px-4 lg:px-6">
@@ -352,165 +549,329 @@ export default function App() {
           <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-medium shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer hover:scale-105 transition-transform">S</div>
         </header>
 
-        {/* Chat Area / Canvas Area */}
+        {/* Chat Area / Canvas Area / Quiz Area */}
         <main className="flex-1 overflow-hidden flex relative">
-          {/* Chat */}
-          <div className={`flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide transition-all duration-500 ${mode === 'canvas' ? (canvasView === 'preview' ? 'hidden md:block md:w-1/3 opacity-50' : 'w-full md:w-1/3') : 'w-full'}`}>
-            <div className="max-w-3xl mx-auto h-full flex flex-col">
-              {messages.length === 0 ? (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
-                  <h2 className="text-3xl md:text-4xl font-medium mb-2 text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">Hola, Sam</h2>
-                  <h1 className="text-4xl md:text-5xl font-semibold mb-12 text-zinc-100 tracking-tight">
-                    ¿Por dónde empezamos?
-                  </h1>
-                  <div className="flex flex-col items-start gap-3">
-                    {suggestions.map((s, i) => (
-                      <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20">
-                        {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="space-y-8">
-                  {messages.map((msg, i) => (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 20, filter: "blur(10px)" }} 
-                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} 
-                      transition={{ duration: 0.6, ease: "easeOut", delay: msg.role === 'assistant' ? 0.1 : 0 }}
-                      key={i} 
-                      className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}
-                    >
-                      <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
-                        {msg.image && (
-                          <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
-                            <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
-                          </div>
-                        )}
-                        <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              code({node, inline, className, children, ...props}: any) {
-                                const match = /language-(\w+)/.exec(className || '')
-                                return !inline && match ? (
-                                  <SyntaxHighlighter
-                                    {...props}
-                                    children={String(children).replace(/\n$/, '')}
-                                    style={vscDarkPlus}
-                                    language={match[1]}
-                                    PreTag="div"
-                                  />
-                                ) : (
-                                  <code {...props} className={className}>
-                                    {children}
-                                  </code>
-                                )
-                              }
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                  {isLoading && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
-                      <div className="flex gap-1">
-                        <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                        <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                        <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                      </div>
-                      <span className="text-xs font-mono tracking-widest uppercase opacity-50">Procesando</span>
-                    </motion.div>
-                  )}
-                  <div ref={messagesEndRef} className="h-4" />
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Canvas */}
-          {mode === 'canvas' && (
-            <div className={`flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col transition-all duration-500 ${canvasView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-zinc-200 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-400" /> Sandbox
-                </h2>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      const blob = new Blob([canvasCode], { type: 'text/html' });
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, '_blank');
-                    }}
-                    className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
-                    title="Abrir en nueva pestaña"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={() => setCanvasCode("")}
-                    className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
-                    title="Limpiar Sandbox"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+          {isGeneratingQuiz && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center text-center p-8"
+            >
+              <div className="relative mb-8">
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  className="w-32 h-32 rounded-full border-t-2 border-b-2 border-purple-500/50"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles className="w-10 h-10 text-purple-400 animate-pulse" />
                 </div>
               </div>
-              <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl relative">
-                {canvasCode ? (
-                  <iframe
-                    srcDoc={canvasCode.includes('<!DOCTYPE html>') ? canvasCode : `
-                      <!DOCTYPE html>
-                      <html>
-                        <head>
-                          <meta charset="utf-8">
-                          <meta name="viewport" content="width=device-width, initial-scale=1">
-                          <script src="https://cdn.tailwindcss.com"></script>
-                          <style>body { font-family: sans-serif; margin: 0; padding: 20px; }</style>
-                        </head>
-                        <body>
-                          ${canvasCode.includes('<script') || canvasCode.includes('<style') ? canvasCode : `<div>${canvasCode}</div>`}
-                        </body>
-                      </html>
-                    `}
-                    className="w-full h-full border-none"
-                    title="Sandbox Preview"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
-                    <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
-                      <Bot className="w-8 h-8 text-zinc-300" />
+              <h2 className="text-2xl font-bold text-zinc-100 mb-2 tracking-tight">Preparando tu Cuestionario</h2>
+              <p className="text-zinc-500 max-w-xs mx-auto text-sm leading-relaxed">
+                SAM está diseñando preguntas personalizadas sobre <span className="text-purple-400 font-medium">{quizTopic}</span> para poner a prueba tus conocimientos.
+              </p>
+              
+              <div className="mt-12 flex gap-1">
+                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="w-2 h-2 bg-purple-500 rounded-full" />
+                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }} className="w-2 h-2 bg-purple-500 rounded-full" />
+                <motion.div animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.4 }} className="w-2 h-2 bg-purple-500 rounded-full" />
+              </div>
+            </motion.div>
+          )}
+
+          {mode === 'quiz' ? (
+            <div className="flex-1 bg-[#000000] flex flex-col items-center justify-center p-4 md:p-8 overflow-y-auto">
+              <div className="max-w-2xl w-full">
+                {!isQuizFinished ? (
+                  <motion.div 
+                    key={currentQuestionIndex}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="space-y-8"
+                  >
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                          <HelpCircle className="w-6 h-6 text-purple-400" />
+                        </div>
+                        <div>
+                          <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest">Pregunta {currentQuestionIndex + 1} de {quizQuestions.length}</h2>
+                          <p className="text-zinc-300 font-medium">{quizTopic}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setIsExitQuizModalOpen(true)}
+                        className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                      >
+                        <LogOut className="w-6 h-6" />
+                      </button>
                     </div>
-                    <p className="text-lg font-medium text-zinc-600 mb-2">Sandbox Vacío</p>
-                    <p className="text-sm">Activa el modo Canvas y pídele a SAM que programe algo para verlo aquí.</p>
-                  </div>
+
+                    <div className="w-full bg-zinc-900 h-1.5 rounded-full overflow-hidden mb-8">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${((currentQuestionIndex + 1) / quizQuestions.length) * 100}%` }}
+                        className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
+                      />
+                    </div>
+
+                    <h1 className="text-2xl md:text-3xl font-semibold text-zinc-100 leading-tight">
+                      {quizQuestions[currentQuestionIndex]?.question}
+                    </h1>
+
+                    <div className="grid gap-3">
+                      {quizQuestions[currentQuestionIndex]?.options.map((option, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            const newAnswers = [...userAnswers, idx];
+                            setUserAnswers(newAnswers);
+                            if (currentQuestionIndex < quizQuestions.length - 1) {
+                              setCurrentQuestionIndex(prev => prev + 1);
+                            } else {
+                              setIsQuizFinished(true);
+                            }
+                          }}
+                          className="w-full text-left p-5 rounded-2xl bg-[#131314] border border-white/5 hover:border-purple-500/50 hover:bg-[#1e1e1f] transition-all group relative overflow-hidden"
+                        >
+                          <div className="flex items-center gap-4 relative z-10">
+                            <span className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                              {String.fromCharCode(65 + idx)}
+                            </span>
+                            <span className="text-zinc-300 group-hover:text-zinc-100 transition-colors">{option}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center space-y-8"
+                  >
+                    <div className="w-24 h-24 bg-gradient-to-tr from-purple-500 to-blue-500 rounded-3xl mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                      <Trophy className="w-12 h-12 text-white" />
+                    </div>
+                    
+                    <div>
+                      <h1 className="text-4xl font-bold text-zinc-100 mb-2">¡Cuestionario Completado!</h1>
+                      <p className="text-zinc-400">Has terminado el cuestionario sobre {quizTopic}</p>
+                    </div>
+
+                    <div className="bg-[#131314] border border-white/5 rounded-3xl p-8">
+                      <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-2">
+                        {userAnswers.filter((ans, idx) => ans === quizQuestions[idx].correctAnswer).length} / {quizQuestions.length}
+                      </div>
+                      <p className="text-sm font-mono text-zinc-500 uppercase tracking-widest">Puntuación Final</p>
+                    </div>
+
+                    <div className="space-y-4 text-left max-h-[40vh] overflow-y-auto pr-2 scrollbar-hide">
+                      <h3 className="text-lg font-semibold text-zinc-200 px-2">Revisión de respuestas:</h3>
+                      {quizQuestions.map((q, i) => (
+                        <div key={i} className={`p-4 rounded-2xl border ${userAnswers[i] === q.correctAnswer ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                          <p className="text-sm font-medium text-zinc-200 mb-2">{i + 1}. {q.question}</p>
+                          <div className="flex flex-col gap-1 text-xs">
+                            <p className={userAnswers[i] === q.correctAnswer ? 'text-emerald-400' : 'text-red-400'}>
+                              Tu respuesta: {q.options[userAnswers[i]]}
+                            </p>
+                            {userAnswers[i] !== q.correctAnswer && (
+                              <p className="text-emerald-400">Correcta: {q.options[q.correctAnswer]}</p>
+                            )}
+                            <p className="text-zinc-500 mt-2 italic">"{q.explanation}"</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          setCurrentQuestionIndex(0);
+                          setUserAnswers([]);
+                          setIsQuizFinished(false);
+                        }}
+                        className="flex-1 py-4 bg-zinc-800 text-zinc-100 rounded-2xl font-semibold hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw className="w-5 h-5" /> Reintentar
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setMode('chat');
+                          setQuizQuestions([]);
+                        }}
+                        className="flex-1 py-4 bg-white text-black rounded-2xl font-semibold hover:bg-zinc-200 transition-all flex items-center justify-center gap-2"
+                      >
+                        Volver al Chat <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
               </div>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Chat */}
+              <div className={`flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide transition-all duration-500 ${mode === 'canvas' ? (canvasView === 'preview' ? 'hidden md:block md:w-1/3 opacity-50' : 'w-full md:w-1/3') : 'w-full'}`}>
+                <div className="max-w-3xl mx-auto h-full flex flex-col">
+                  {messages.length === 0 ? (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
+                      <h2 className="text-3xl md:text-4xl font-medium mb-2 text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">Hola, Sam</h2>
+                      <h1 className="text-4xl md:text-5xl font-semibold mb-12 text-zinc-100 tracking-tight">
+                        ¿Por dónde empezamos?
+                      </h1>
+                      <div className="flex flex-col items-start gap-3">
+                        {suggestions.map((s, i) => (
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20">
+                            {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <div className="space-y-8">
+                      {messages.map((msg, i) => (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 20, filter: "blur(10px)" }} 
+                          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} 
+                          transition={{ duration: 0.6, ease: "easeOut", delay: msg.role === 'assistant' ? 0.1 : 0 }}
+                          key={i} 
+                          className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}
+                        >
+                          <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
+                            {msg.image && (
+                              <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
+                                <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+                              </div>
+                            )}
+                            <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
+                              <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  code({node, inline, className, children, ...props}: any) {
+                                    const match = /language-(\w+)/.exec(className || '')
+                                    return !inline && match ? (
+                                      <SyntaxHighlighter
+                                        {...props}
+                                        children={String(children).replace(/\n$/, '')}
+                                        style={vscDarkPlus}
+                                        language={match[1]}
+                                        PreTag="div"
+                                      />
+                                    ) : (
+                                      <code {...props} className={className}>
+                                        {children}
+                                      </code>
+                                    )
+                                  }
+                                }}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                      {isLoading && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
+                          <div className="flex gap-1">
+                            <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                            <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                            <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                          </div>
+                          <span className="text-xs font-mono tracking-widest uppercase opacity-50">Procesando</span>
+                        </motion.div>
+                      )}
+                      <div ref={messagesEndRef} className="h-4" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Canvas */}
+              {mode === 'canvas' && (
+                <div className={`flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col transition-all duration-500 ${canvasView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-medium text-zinc-200 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-400" /> Sandbox
+                    </h2>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          const blob = new Blob([canvasCode], { type: 'text/html' });
+                          const url = URL.createObjectURL(blob);
+                          window.open(url, '_blank');
+                        }}
+                        className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
+                        title="Abrir en nueva pestaña"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setCanvasCode("")}
+                        className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors"
+                        title="Limpiar Sandbox"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                    </div>
+                  </div>
+                  <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl relative">
+                    {canvasCode ? (
+                      <iframe
+                        srcDoc={canvasCode.includes('<!DOCTYPE html>') ? canvasCode : `
+                          <!DOCTYPE html>
+                          <html>
+                            <head>
+                              <meta charset="utf-8">
+                              <meta name="viewport" content="width=device-width, initial-scale=1">
+                              <script src="https://cdn.tailwindcss.com"></script>
+                              <style>body { font-family: sans-serif; margin: 0; padding: 20px; }</style>
+                            </head>
+                            <body>
+                              ${canvasCode.includes('<script') || canvasCode.includes('<style') ? canvasCode : `<div>${canvasCode}</div>`}
+                            </body>
+                          </html>
+                        `}
+                        className="w-full h-full border-none"
+                        title="Sandbox Preview"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
+                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
+                          <Bot className="w-8 h-8 text-zinc-300" />
+                        </div>
+                        <p className="text-lg font-medium text-zinc-600 mb-2">Sandbox Vacío</p>
+                        <p className="text-sm">Activa el modo Canvas y pídele a SAM que programe algo para verlo aquí.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {/* Mobile View Toggle */}
-          {mode === 'canvas' && (
-            <div className="md:hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex bg-[#1e1e1f] border border-white/10 rounded-full p-1 shadow-2xl">
-              <button 
-                onClick={() => setCanvasView('chat')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${canvasView === 'chat' ? 'bg-white text-black' : 'text-zinc-400'}`}
-              >
-                <Bot className="w-4 h-4" /> Chat
-              </button>
-              <button 
-                onClick={() => setCanvasView('preview')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${canvasView === 'preview' ? 'bg-white text-black' : 'text-zinc-400'}`}
-              >
-                <Layout className="w-4 h-4" /> Preview
-              </button>
-            </div>
+              {/* Mobile View Toggle */}
+              {mode === 'canvas' && (
+                <div className="md:hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex bg-[#1e1e1f] border border-white/10 rounded-full p-1 shadow-2xl">
+                  <button 
+                    onClick={() => setCanvasView('chat')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${canvasView === 'chat' ? 'bg-white text-black' : 'text-zinc-400'}`}
+                  >
+                    <Bot className="w-4 h-4" /> Chat
+                  </button>
+                  <button 
+                    onClick={() => setCanvasView('preview')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${canvasView === 'preview' ? 'bg-white text-black' : 'text-zinc-400'}`}
+                  >
+                    <Layout className="w-4 h-4" /> Preview
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </main>
 
@@ -590,6 +951,7 @@ export default function App() {
                   <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><ImageIcon className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
                   <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
                   <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
+                  <button type="button" onClick={() => { setIsQuizSetupOpen(true); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><HelpCircle className="w-5 h-5 text-yellow-400" /> Cuestionario</button>
                   <div className="h-[1px] bg-white/5 my-1" />
                   <button 
                     type="button" 
