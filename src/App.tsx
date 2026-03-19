@@ -394,9 +394,9 @@ export default function App() {
           </div>
         </main>
 
-        {/* Input Area (Gemini style bottom sheet) */}
-        <div className="absolute bottom-0 left-0 right-0 bg-[#131314] rounded-t-[2rem] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.8)] p-4 md:p-6 z-20">
-          <div className="max-w-3xl mx-auto relative">
+        {/* Input Area (Professional Elongated Bar) */}
+        <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-auto md:w-full md:max-w-3xl md:mx-auto z-20">
+          <div className="bg-[#1e1e1f] border border-white/10 rounded-full shadow-lg h-14 flex items-center px-2 md:px-4">
             
             {/* Slash Commands */}
             <AnimatePresence>
@@ -405,7 +405,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-full left-4 mb-2 bg-[#1e1e1f] border border-white/10 rounded-xl shadow-xl overflow-hidden w-64 z-50"
+                  className="absolute bottom-full left-0 mb-2 bg-[#1e1e1f] border border-white/10 rounded-2xl shadow-xl overflow-hidden w-64 z-50"
                 >
                   <div className="p-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Comandos</div>
                   <button type="button" onClick={() => handleSlashCommand('/resumir')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><File className="w-4 h-4 text-blue-400"/> Resumir texto</button>
@@ -422,7 +422,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="relative w-24 h-24 mb-4 rounded-xl overflow-hidden border border-white/10 ml-4"
+                  className="absolute bottom-full left-0 mb-2 w-16 h-16 rounded-2xl overflow-hidden border border-white/10"
                 >
                   <img src={selectedImage} alt="Selected" className="w-full h-full object-cover" />
                   <button 
@@ -430,54 +430,49 @@ export default function App() {
                     onClick={() => setSelectedImage(null)}
                     className="absolute top-1 right-1 bg-black/50 p-1 rounded-full hover:bg-black/80 text-white"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3 h-3" />
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
+              <button type="button" onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-full transition-colors">
+                <Plus className="w-5 h-5" />
+              </button>
+
               <input
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
-                className="w-full bg-transparent px-4 py-2 outline-none text-zinc-100 placeholder:text-zinc-500 text-lg"
-                placeholder="Pregúntale a SAM"
+                className="flex-1 bg-transparent px-2 py-2 outline-none text-zinc-100 placeholder:text-zinc-500"
+                placeholder="Pregúntale a SAM..."
               />
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-1 relative">
-                  <button type="button" onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} className="p-3 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-full transition-colors">
-                    <Plus className="w-6 h-6" />
-                  </button>
 
-                  <AnimatePresence>
-                    {isPlusMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute bottom-full left-0 mb-4 bg-[#1e1e1f]/95 backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-1 w-56 overflow-hidden"
-                      >
-                        <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><ImageIcon className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
-                        <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
-                        <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={(!input.trim() && !selectedImage) || isLoading}
-                  className="p-3 bg-white/10 text-zinc-300 rounded-full hover:bg-white/20 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={(!input.trim() && !selectedImage) || isLoading}
+                className="p-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </form>
-            <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
-            <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+
+            <AnimatePresence>
+              {isPlusMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full right-0 mb-4 bg-[#1e1e1f]/95 backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col gap-1 w-56 overflow-hidden"
+                >
+                  <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><ImageIcon className="w-5 h-5 text-blue-400" /> Subir Imagen</button>
+                  <button type="button" onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><File className="w-5 h-5 text-emerald-400" /> Subir Archivo</button>
+                  <button type="button" onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-zinc-200 transition-colors"><Camera className="w-5 h-5 text-purple-400" /> Abrir Cámara</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
