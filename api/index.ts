@@ -11,9 +11,7 @@ const PORT = 3000;
 app.use(express.json());
 
 const MODELS = [
-  "stepfun/step-3.5-flash:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "minimax/minimax-m2.5:free"
+  "stepfun/step-3.5-flash:free"
 ];
 
 // API Route for OpenRouter Chat

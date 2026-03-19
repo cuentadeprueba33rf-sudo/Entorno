@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Send, Bot, Loader2, Menu, Info, User, Globe, Image, Plus, Mic, AudioLines } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -12,14 +12,8 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("stepfun/step-3.5-flash:free");
+  const selectedModel = "stepfun/step-3.5-flash:free";
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const MODELS = [
-    { id: "stepfun/step-3.5-flash:free", name: "Nemotron 3.5" },
-    { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
-    { id: "minimax/minimax-m2.5:free", name: "Minimax M2.5" }
-  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,35 +71,39 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0a] text-zinc-100 font-sans">
+    <div className="flex flex-col h-screen bg-black text-zinc-100 font-sans">
       {/* Header */}
-      <header className="border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-            <Bot className="w-5 h-5 text-zinc-300" />
-          </div>
-          <h1 className="font-semibold text-base tracking-tight text-zinc-200">SAM IA</h1>
+      <header className="p-4 flex items-center justify-between sticky top-0 z-10">
+        <Menu className="w-6 h-6 text-zinc-400" />
+        <button className="flex items-center gap-2 bg-zinc-900 px-4 py-1.5 rounded-full text-sm text-zinc-300 border border-zinc-800">
+          <Info className="w-4 h-4" />
+          ¿Quién es SAM?
+        </button>
+        <div className="flex items-center gap-4">
+          <User className="w-6 h-6 text-zinc-400" />
+          <Globe className="w-6 h-6 text-zinc-400" />
         </div>
-        <select 
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          className="text-xs text-zinc-300 font-medium bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-        >
-          {MODELS.map(m => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
       </header>
 
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <div className="max-w-3xl mx-auto space-y-8">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
-              <div className="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-800">
-                <Bot className="w-10 h-10 text-zinc-400" />
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-8">
+              <h2 className="text-4xl font-semibold text-zinc-100 tracking-tight">¿En qué puedo ayudarte?</h2>
+              <div className="flex gap-3">
+                <button className="flex items-center gap-2 bg-zinc-900 px-5 py-3 rounded-full text-sm text-zinc-300 border border-zinc-800 hover:bg-zinc-800">
+                  <Image className="w-4 h-4" />
+                  Crea una imagen
+                </button>
+                <button className="flex items-center gap-2 bg-zinc-900 px-5 py-3 rounded-full text-sm text-zinc-300 border border-zinc-800 hover:bg-zinc-800">
+                  <Bot className="w-4 h-4" />
+                  Analiza imágenes
+                </button>
+                <button className="bg-zinc-900 px-5 py-3 rounded-full text-sm text-zinc-300 border border-zinc-800 hover:bg-zinc-800">
+                  Más
+                </button>
               </div>
-              <h2 className="text-3xl font-semibold text-zinc-100">¿En qué puedo ayudarte hoy?</h2>
             </div>
           )}
 
@@ -123,11 +121,11 @@ export default function App() {
                   </div>
                 )}
                 
-                <div className={`flex flex-col gap-2 max-w-[80%] ${msg.role === "user" ? "items-end" : ""}`}>
-                  <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                <div className={`flex flex-col gap-2 max-w-[85%] ${msg.role === "user" ? "items-end" : ""}`}>
+                  <div className={`p-5 rounded-3xl text-sm leading-relaxed shadow-sm ${
                     msg.role === "user" 
-                      ? "bg-zinc-800 text-zinc-100" 
-                      : "text-zinc-200"
+                      ? "bg-zinc-800 text-zinc-100 rounded-br-none" 
+                      : "bg-zinc-900 text-zinc-200 rounded-bl-none border border-zinc-800"
                   }`}>
                     {msg.content}
                   </div>
@@ -153,22 +151,28 @@ export default function App() {
       </main>
 
       {/* Input Area */}
-      <footer className="p-4 md:p-6 bg-[#0a0a0a]">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto relative">
+      <footer className="p-4 md:p-6 bg-black">
+        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto relative bg-zinc-900 rounded-full border border-zinc-800 flex items-center px-4 py-2">
+          <button type="button" className="p-2 text-zinc-400 hover:text-zinc-200">
+            <Plus className="w-6 h-6" />
+          </button>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Preguntar a SAM IA..."
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-4 pl-6 pr-16 focus:outline-none focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600 text-zinc-200"
+            className="flex-1 bg-transparent py-3 px-4 focus:outline-none text-zinc-200 placeholder:text-zinc-600"
             disabled={isLoading}
           />
+          <button type="button" className="p-2 text-zinc-400 hover:text-zinc-200">
+            <Mic className="w-6 h-6" />
+          </button>
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-lg bg-zinc-700 text-zinc-200 flex items-center justify-center hover:bg-zinc-600 disabled:opacity-50 transition-colors"
+            className="p-2 text-blue-500 hover:text-blue-400 disabled:opacity-50"
           >
-            <Send className="w-4 h-4" />
+            <AudioLines className="w-6 h-6" />
           </button>
         </form>
         <p className="text-[10px] text-center text-zinc-700 mt-4">
