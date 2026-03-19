@@ -12,7 +12,14 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("stepfun/step-3.5-flash:free");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const MODELS = [
+    { id: "stepfun/step-3.5-flash:free", name: "Nemotron 3.5" },
+    { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
+    { id: "minimax/minimax-m2.5:free", name: "Minimax M2.5" }
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -36,7 +43,7 @@ export default function App() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel }),
       });
 
       if (!response.ok) {
@@ -79,9 +86,15 @@ export default function App() {
           </div>
           <h1 className="font-semibold text-base tracking-tight text-zinc-200">SAM IA</h1>
         </div>
-        <div className="text-xs text-zinc-500 font-medium bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
-          Nemotron 3.5
-        </div>
+        <select 
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+          className="text-xs text-zinc-300 font-medium bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+        >
+          {MODELS.map(m => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
       </header>
 
       {/* Chat Area */}

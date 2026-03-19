@@ -10,45 +10,56 @@ const PORT = 3000;
 
 app.use(express.json());
 
+const MODELS = [
+  "stepfun/step-3.5-flash:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "minimax/minimax-m2.5:free"
+];
+
 // API Route for OpenRouter Chat
 app.post("/api/chat", async (req, res) => {
-  const { messages } = req.body;
+  const { messages, model: requestedModel } = req.body;
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: "OPENROUTER_API_KEY is not set" });
   }
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
-        "X-Title": "SAM IA",
-      },
-      body: JSON.stringify({
-        model: "stepfun/step-3.5-flash:free",
-        messages: [
-          { role: "system", content: "Tu nombre es SAM IA. Eres un asistente útil y directo. Responde de manera concisa y no muestres procesos de razonamiento." },
-          ...messages
-        ],
-        reasoning: { enabled: false }
-      }),
-    });
+  const modelsToTry = requestedModel 
+    ? [requestedModel, ...MODELS.filter(m => m !== requestedModel)]
+    : MODELS;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return res.status(response.status).json(errorData);
+  for (const model of modelsToTry) {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+          "X-Title": "SAM IA",
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: "system", content: "Tu nombre es SAM IA. Eres un asistente útil y directo. Responde de manera concisa y no muestres procesos de razonamiento." },
+            ...messages
+          ],
+          reasoning: { enabled: true }
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return res.json(data);
+      }
+      console.warn(`Model ${model} failed with status ${response.status}`);
+    } catch (error) {
+      console.warn(`Model ${model} failed with error:`, error);
     }
-
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    console.error("Error calling OpenRouter:", error);
-    res.status(500).json({ error: "Failed to connect to OpenRouter" });
   }
+
+  res.status(500).json({ error: "All models failed to respond" });
 });
 
 // Vite middleware for development
