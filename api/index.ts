@@ -72,9 +72,10 @@ app.post("/api/chat", async (req, res) => {
           ]
         };
 
-        // Only enable reasoning for models that likely support it or if it's a "reasoning" model
-        // Explicitly disable for others like GLM to avoid unwanted thinking output
-        if (model.includes('r1') || model.includes('nemotron')) {
+        // Only enable reasoning for models that explicitly support it to avoid slow responses on others
+        // GLM is explicitly disabled as per user request due to slow response times
+        const isReasoningModel = model.includes('r1') || model.includes('nemotron');
+        if (isReasoningModel && !model.includes('glm')) {
           payload.reasoning = { enabled: true };
         } else {
           payload.reasoning = { enabled: false };
@@ -134,6 +135,46 @@ app.post("/api/chat", async (req, res) => {
   }
 
   res.status(500).json({ error: "Todos los modelos de IA están saturados o no disponibles en este momento. Por favor, intenta de nuevo en unos segundos." });
+});
+
+// API Route for Image Generation
+app.post("/api/generate-image", async (req, res) => {
+  const { prompt, model: requestedModel } = req.body;
+  const apiKey = process.env.OPENROUTER_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: "OPENROUTER_API_KEY is not set" });
+  }
+
+  const model = requestedModel || "bytedance-seed/seedream-4.5";
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+        "X-OpenRouter-Title": "SAM IA",
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image"]
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return res.status(response.status).json(errorData);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error("Image generation error:", error);
+    res.status(500).json({ error: "Failed to generate image" });
+  }
 });
 
 // Vite middleware for development

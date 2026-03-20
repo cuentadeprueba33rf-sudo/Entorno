@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Menu, X, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout, HelpCircle, Trophy, ArrowRight, RotateCcw, LogOut, Clock, ShieldCheck, History } from "lucide-react";
+import { Bot, Menu, X, ThumbsUp, ThumbsDown, Calculator, Zap, BookOpen, Pencil, Send, Plus, Image as ImageIcon, File, Camera, Sparkles, Settings, Trash2, Copy, Check, Volume2, Maximize2, Minimize2, Layout, HelpCircle, Trophy, ArrowRight, RotateCcw, LogOut, Clock, ShieldCheck, History, ChevronDown, Monitor, AlertTriangle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { StudyView } from './components/StudyView';
+import { IMAGE_MODELS, CHAT_MODELS, getModelLimit } from './config/limits';
 
 interface Message {
   role: "user" | "assistant";
@@ -13,6 +15,7 @@ interface Message {
   isCreatorCard?: boolean;
   reasoning_details?: string;
   reasoning?: string;
+  rating?: 'up' | 'down';
 }
 
 interface QuizQuestion {
@@ -34,63 +37,59 @@ const PERSONALITY_PROMPTS = {
 
 const CreatorCard = () => (
   <motion.div 
-    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+    initial={{ opacity: 0, scale: 0.95, y: 10 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
-    className="w-full max-w-md bg-gradient-to-br from-[#1e1e1f] to-[#131314] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group"
+    className="w-full max-w-sm glass-panel rounded-[2.5rem] overflow-hidden relative group"
   >
-    {/* Background Glow */}
-    <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-500/20 blur-[80px] rounded-full group-hover:bg-purple-500/30 transition-all duration-700" />
-    <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-all duration-700" />
-
-    <div className="relative z-10">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-          <Zap className="w-8 h-8 text-white fill-white" />
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-emerald-500 opacity-50 group-hover:opacity-100 transition-opacity" />
+    
+    <div className="p-8">
+      <div className="flex items-center gap-5 mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <Sparkles className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h3 className="text-2xl font-bold text-white tracking-tight">SAM VERCE CONTROLLER</h3>
-          <p className="text-xs font-mono text-purple-400 uppercase tracking-[0.3em]">SISTEMA CENTRAL</p>
+          <h3 className="text-xl font-bold text-white tracking-tight">SAM Neural Core</h3>
+          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.25em] opacity-80">Enterprise Edition</p>
         </div>
       </div>
 
-      <div className="space-y-4 mb-8">
-        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-          <span className="text-sm text-zinc-400">Desarrollador</span>
-          <span className="text-sm font-semibold text-zinc-100">Samuel Casseres</span>
-        </div>
-        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-          <span className="text-sm text-zinc-400">Arquitectura</span>
-          <span className="text-sm font-semibold text-zinc-100">Neural Vercel Core</span>
-        </div>
-        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-          <span className="text-sm text-zinc-400">Versión</span>
-          <span className="text-sm font-mono text-purple-400">v4.2.0-stable</span>
-        </div>
+      <div className="space-y-2 mb-8">
+        {[
+          { label: "Lead Architect", value: "Samuel Casseres" },
+          { label: "System Engine", value: "Vercel Edge Runtime" },
+          { label: "Build Version", value: "v4.5.2-pro", mono: true }
+        ].map((item, i) => (
+          <div key={i} className="flex items-center justify-between p-4 bg-white/[0.03] rounded-2xl border border-white/5 hover:bg-white/[0.05] transition-all group/item">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{item.label}</span>
+            <span className={`text-xs font-medium ${item.mono ? 'font-mono text-emerald-400/80' : 'text-zinc-200'}`}>{item.value}</span>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-center">
-          <div className="text-xl font-bold text-purple-300">99.9%</div>
-          <div className="text-[10px] text-purple-400 uppercase tracking-widest">Uptime</div>
+        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-1">
+          <div className="text-lg font-bold text-zinc-100">99.99%</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Reliability</div>
         </div>
-        <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center">
-          <div className="text-xl font-bold text-blue-300">0.2ms</div>
-          <div className="text-[10px] text-blue-400 uppercase tracking-widest">Latencia</div>
+        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-1">
+          <div className="text-lg font-bold text-zinc-100">Edge Opt</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-widest font-bold">Low Latency</div>
         </div>
       </div>
 
       <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
         <div className="flex -space-x-2">
           {[1,2,3].map(i => (
-            <div key={i} className="w-8 h-8 rounded-full border-2 border-[#131314] bg-zinc-800 flex items-center justify-center overflow-hidden">
-              <img src={`https://picsum.photos/seed/${i+10}/32/32`} alt="avatar" className="w-full h-full object-cover opacity-50" referrerPolicy="no-referrer" />
+            <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0a0a0a] bg-zinc-800 overflow-hidden ring-1 ring-white/5">
+              <img src={`https://picsum.photos/seed/${i+20}/64/64`} alt="user" className="w-full h-full object-cover grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer" referrerPolicy="no-referrer" />
             </div>
           ))}
-          <div className="w-8 h-8 rounded-full border-2 border-[#131314] bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white">
-            +5k
+          <div className="w-8 h-8 rounded-full border-2 border-[#0a0a0a] bg-emerald-600 flex items-center justify-center text-[10px] font-bold text-white ring-1 ring-white/5">
+            +10k
           </div>
         </div>
-        <span className="text-[10px] text-zinc-500 font-medium">© 2026 SAM VERCE LABS</span>
+        <span className="text-[9px] text-zinc-600 font-bold tracking-widest uppercase">© 2026 SAM LABS</span>
       </div>
     </div>
   </motion.div>
@@ -118,16 +117,24 @@ const ReasoningDisplay = ({ reasoning }: { reasoning: any }) => {
   const content = renderReasoning(reasoning);
 
   return (
-    <div className="mb-4 bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
+    <div className="mb-6 glass-panel rounded-2xl overflow-hidden transition-all duration-500 group">
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-3 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-[0.25em] hover:bg-white/[0.03] transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <Zap className="w-3 h-3 text-yellow-400" />
-          <span>Proceso de Razonamiento</span>
+        <div className="flex items-center gap-4">
+          <div className="relative flex items-center justify-center">
+            <div className={`absolute w-3 h-3 rounded-full blur-[4px] ${isExpanded ? 'bg-emerald-500/50' : 'bg-zinc-800'}`} />
+            <div className={`relative w-1.5 h-1.5 rounded-full transition-all duration-500 ${isExpanded ? 'bg-emerald-400 scale-110' : 'bg-zinc-700'}`} />
+          </div>
+          <span className="group-hover:text-zinc-300 transition-colors">Núcleo de Razonamiento</span>
         </div>
-        {isExpanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] opacity-40 group-hover:opacity-100 transition-opacity">{isExpanded ? 'COLAPSAR' : 'EXPANDIR'}</span>
+          <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
+            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+          </motion.div>
+        </div>
       </button>
       <AnimatePresence>
         {isExpanded && (
@@ -135,15 +142,55 @@ const ReasoningDisplay = ({ reasoning }: { reasoning: any }) => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="overflow-hidden"
           >
-            <div className="p-4 pt-0 text-xs text-zinc-400 font-mono leading-relaxed whitespace-pre-wrap border-t border-white/5 bg-black/20">
-              {content}
+            <div className="p-6 pt-0 text-[11px] text-zinc-400 font-mono leading-relaxed whitespace-pre-wrap border-t border-white/5 bg-black/20 selection:bg-emerald-500/20">
+              <div className="opacity-70">
+                {content}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+// Gallery Image Component with Load Animation
+const GalleryImage = ({ item, onClick }: { item: {url: string, prompt: string}, onClick: () => void }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="group relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-white/5 cursor-pointer"
+      onClick={onClick}
+    >
+      <motion.img 
+        src={item.url} 
+        alt={item.prompt} 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isLoaded ? 1 : 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        onLoad={() => setIsLoaded(true)}
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        referrerPolicy="no-referrer"
+      />
+      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        <Maximize2 className="w-6 h-6 text-white" />
+      </div>
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            className="w-5 h-5 border-2 border-purple-500/30 border-t-purple-500 rounded-full"
+          />
+        </div>
+      )}
+    </motion.div>
   );
 };
 
@@ -153,6 +200,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'chat' | 'study'>('chat');
+  const [isImagePromptOpen, setIsImagePromptOpen] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [showNotice, setShowNotice] = useState(false);
   const [personality, setPersonality] = useState<Personality>("professional");
@@ -176,6 +227,38 @@ export default function App() {
   const [isQuizSetupOpen, setIsQuizSetupOpen] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("nvidia/llama-3.1-nemotron-70b-instruct");
+  const [selectedImageModel, setSelectedImageModel] = useState<string>(IMAGE_MODELS[0].id);
+  const [usage, setUsage] = useState<Record<string, number>>({});
+  const [gallery, setGallery] = useState<{url: string, prompt: string}[]>([]);
+  const [newImageReady, setNewImageReady] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<{url: string, prompt: string} | null>(null);
+
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const lastResetDate = localStorage.getItem('sam_usage_reset_date');
+    const savedUsage = localStorage.getItem('sam_usage_data');
+
+    if (lastResetDate !== today) {
+      setUsage({});
+      localStorage.setItem('sam_usage_reset_date', today);
+      localStorage.setItem('sam_usage_data', JSON.stringify({}));
+    } else if (savedUsage) {
+      setUsage(JSON.parse(savedUsage));
+    }
+  }, []);
+
+  const checkUsage = (modelId: string) => {
+    const limit = getModelLimit(modelId);
+    const currentUsage = usage[modelId] || 0;
+    return currentUsage < limit;
+  };
+
+  const incrementUsage = (modelId: string) => {
+    const newUsage = { ...usage, [modelId]: (usage[modelId] || 0) + 1 };
+    setUsage(newUsage);
+    localStorage.setItem('sam_usage_data', JSON.stringify(newUsage));
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -294,6 +377,52 @@ export default function App() {
     }
   };
 
+  const handleGenerateImage = async (prompt: string, modelId?: string) => {
+    const activeModel = modelId || selectedImageModel;
+    if (!checkUsage(activeModel)) {
+      setMessages(prev => [...prev, { role: "assistant", content: `Has alcanzado tu límite diario para el modelo ${IMAGE_MODELS.find(m => m.id === activeModel)?.name}. Por favor, intenta con otro modelo o espera a mañana.` }]);
+      return;
+    }
+    
+    setIsGeneratingImage(true);
+    
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, model: activeModel }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate image");
+      const data = await response.json();
+      const imageUrl = data.choices[0].message.images[0].image_url.url;
+      
+      setGallery(prev => [{url: imageUrl, prompt}, ...prev]);
+      setNewImageReady(true);
+      setMessages(prev => [...prev, { role: "assistant", content: `Aquí tienes tu imagen generada con ${IMAGE_MODELS.find(m => m.id === activeModel)?.name}:`, image: imageUrl }]);
+      incrementUsage(activeModel);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      setMessages(prev => [...prev, { role: "assistant", content: "Lo siento, no pude generar la imagen en este momento. Inténtalo de nuevo." }]);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  const handleRateMessage = (index: number, rating: 'up' | 'down') => {
+    setMessages(prev => prev.map((msg, i) => 
+      i === index ? { ...msg, rating: msg.rating === rating ? undefined : rating } : msg
+    ));
+  };
+
+  const handleCopyMessage = (content: string, index: number) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(index);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if ((!input.trim() && !selectedImage) || isLoading) return;
@@ -309,18 +438,34 @@ export default function App() {
     setShowSlashCommands(false);
     setIsLoading(true);
 
-    // Check for Quiz trigger
     if (currentInput.toLowerCase().includes('cuestionario') || currentInput.toLowerCase().includes('quiz')) {
+      if (!checkUsage(selectedModel)) {
+        setMessages(prev => [...prev, { role: "assistant", content: "Has alcanzado tu límite diario para este modelo. Por favor, intenta con otro modelo o espera a mañana." }]);
+        setIsLoading(false);
+        return;
+      }
       // Try to extract topic and count
       const countMatch = currentInput.match(/(\d+)\s*preguntas/i);
       const count = countMatch ? parseInt(countMatch[1]) : 5;
       const topic = currentInput.replace(/cuestionario|quiz|\d+\s*preguntas/gi, '').trim() || "Cultura General";
       
       await generateQuiz(topic, count);
+      incrementUsage(selectedModel);
+      return;
+    }
+
+    // Check for Image generation trigger
+    if (currentInput.toLowerCase().includes('genera una imagen') || currentInput.toLowerCase().includes('crea una imagen')) {
+      const prompt = currentInput.replace(/genera una imagen|crea una imagen/gi, '').trim();
+      await handleGenerateImage(prompt);
+      setIsLoading(false);
       return;
     }
 
     try {
+      if (!checkUsage(selectedModel)) {
+        throw new Error("Has alcanzado tu límite diario para este modelo. Por favor, intenta con otro modelo o espera a mañana.");
+      }
       const systemPrompt = mode === 'canvas' 
         ? `${PERSONALITY_PROMPTS[personality]}\nIMPORTANTE: Estás en MODO CANVAS. Tu objetivo es escribir código funcional (HTML/CSS/JS) que se pueda previsualizar. Responde ÚNICAMENTE con el bloque de código necesario. No des explicaciones en el chat.`
         : PERSONALITY_PROMPTS[personality];
@@ -353,6 +498,8 @@ export default function App() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || "Error en la respuesta del servidor");
       }
+      
+      incrementUsage(selectedModel);
       
       const data = await response.json();
       const assistantMessage = data.choices[0].message;
@@ -422,15 +569,12 @@ export default function App() {
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="h-12 px-2 bg-[#0a0a0a]/40 backdrop-blur-2xl border border-white/10 rounded-full flex items-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto"
+          className="h-12 px-2 bg-[#0a0a0a]/60 backdrop-blur-3xl border border-white/5 rounded-full flex items-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.6)] pointer-events-auto"
         >
           {/* Menu Button */}
           <button 
-            onClick={() => {
-              console.log('Opening Sidebar');
-              setIsSidebarOpen(true);
-            }} 
-            className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
+            onClick={() => setIsSidebarOpen(true)} 
+            className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-all active:scale-95"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -438,32 +582,13 @@ export default function App() {
           <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
           {/* Brand Identity */}
-          <div className="flex items-center gap-3 px-2 cursor-default group">
-            <h1 className="text-sm font-semibold tracking-[0.2em] text-zinc-100">
-              SAM
+          <div className="flex items-center gap-3 px-2 cursor-default">
+            <h1 className="text-xs font-bold tracking-[0.2em] text-zinc-100 uppercase">
+              SAM IA
             </h1>
             <div className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400/40 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500"></span>
-            </div>
-          </div>
-
-          <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-          {/* Actions */}
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={() => {
-                setIsSettingsOpen(true);
-              }}
-              className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-            
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-white/10 flex items-center justify-center group cursor-pointer hover:border-white/20 transition-all overflow-hidden">
-              <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-100 transition-colors">S</span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400/40 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
             </div>
           </div>
         </motion.div>
@@ -595,25 +720,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Floating Settings Button (New Location) */}
-      <AnimatePresence>
-        {!isAppLoading && !showNotice && !isSettingsOpen && (
-          <motion.button 
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            whileHover={{ scale: 1.1, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setIsSettingsOpen(true)}
-            className="fixed bottom-24 right-6 z-[150] p-4 bg-[#1e1e1f]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-zinc-400 hover:text-white transition-all md:bottom-8 md:right-8 group"
-          >
-            <Settings className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
-            <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/80 backdrop-blur-md border border-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              Configuración
-            </span>
-          </motion.button>
-        )}
-      </AnimatePresence>
 
       {/* Under Construction Notice */}
       <AnimatePresence>
@@ -823,92 +929,205 @@ export default function App() {
           ) : (
             <>
               {/* Chat */}
-              <div className={`flex-1 overflow-y-auto p-4 pb-40 scroll-smooth scrollbar-hide transition-all duration-500 ${mode === 'canvas' ? (canvasView === 'preview' ? 'hidden md:block md:w-1/3 opacity-50' : 'w-full md:w-1/3') : 'w-full'}`}>
-                <div className="max-w-3xl mx-auto h-full flex flex-col">
+              <div className={`flex-1 overflow-y-auto p-4 pb-56 scroll-smooth scrollbar-hide transition-all duration-500 ${mode === 'canvas' ? (canvasView === 'preview' ? 'hidden md:block md:w-1/3 opacity-50' : 'w-full md:w-1/3') : 'w-full'}`}>
+                <div className="max-w-4xl mx-auto h-full flex flex-col">
                   {messages.length === 0 ? (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mt-12 md:mt-24 flex-1">
-                      <h2 className="text-3xl md:text-4xl font-medium mb-2 text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">Hola, Sam</h2>
-                      <h1 className="text-4xl md:text-5xl font-semibold mb-12 text-zinc-100 tracking-tight">
-                        ¿Por dónde empezamos?
-                      </h1>
-                      <div className="flex flex-col items-start gap-3">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="mt-12 md:mt-32 flex-1">
+                      <div className="flex flex-col items-center text-center mb-16">
+                        <motion.div 
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.2, duration: 0.5 }}
+                          className="w-20 h-20 rounded-[2rem] bg-gradient-to-tr from-purple-600 via-blue-500 to-emerald-400 flex items-center justify-center shadow-[0_0_50px_rgba(139,92,246,0.3)] mb-8 relative group"
+                        >
+                          <div className="absolute inset-0 rounded-[2rem] bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                          <Sparkles className="w-10 h-10 text-white relative z-10" />
+                        </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.4, duration: 0.5 }}
+                        >
+                          <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.5em] mb-4">Neural Interface v4.5.2</h2>
+                          <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tighter mb-6">
+                            SAM <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">INTELLIGENCE</span>
+                          </h1>
+                          <p className="text-zinc-500 text-sm max-w-lg mx-auto leading-relaxed">
+                            Potenciando la creatividad y la productividad con inteligencia artificial de última generación. 
+                            Selecciona una tarea para comenzar.
+                          </p>
+                        </motion.div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
                         {suggestions.map((s, i) => (
                           <motion.button 
-                            whileHover={{ scale: 1.02 }} 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 + (i * 0.1), duration: 0.5 }}
+                            whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.03)" }} 
                             whileTap={{ scale: 0.98 }} 
                             key={i} 
                             onClick={() => handleSuggestionClick(s)} 
-                            className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20"
+                            className="flex items-center gap-5 glass-panel p-6 rounded-[2rem] transition-all duration-500 group text-left"
                           >
-                            {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
+                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-all duration-500 border border-white/5 group-hover:border-white/10 group-hover:scale-110">
+                              <div className="text-zinc-400 group-hover:text-white transition-colors">
+                                {s.icon}
+                              </div>
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-1 group-hover:text-purple-400 transition-colors">{s.text}</span>
+                              <span className="text-sm text-zinc-300 font-medium truncate opacity-70 group-hover:opacity-100 transition-opacity">{s.action}</span>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-white group-hover:translate-x-1 transition-all" />
                           </motion.button>
                         ))}
                       </div>
                     </motion.div>
                   ) : (
-                    <div className="space-y-8">
-                      {messages.map((msg, i) => (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20, filter: "blur(10px)" }} 
-                          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} 
-                          transition={{ duration: 0.6, ease: "easeOut", delay: msg.role === 'assistant' ? 0.1 : 0 }}
-                          key={i} 
-                          className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}
-                        >
-                          <div className={`py-2 rounded-3xl max-w-[85%] leading-relaxed ${msg.role === 'user' ? 'bg-[#1e1e1f] text-zinc-100 rounded-tr-sm px-4' : 'bg-transparent text-zinc-200 px-1'}`}>
-                            {msg.isCreatorCard ? (
-                              <CreatorCard />
-                            ) : (
-                              <>
-                                {msg.image && (
-                                  <div className="mb-3 rounded-xl overflow-hidden border border-white/10 max-w-sm">
-                                    <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+                    <div className="space-y-10">
+                      {viewMode === 'study' ? (
+                        <StudyView 
+                          onExit={() => setViewMode('chat')} 
+                          onGenerateImage={handleGenerateImage} 
+                          isGenerating={isGeneratingImage}
+                          newImageReady={newImageReady}
+                          setNewImageReady={setNewImageReady}
+                          onViewGallery={() => setShowGallery(true)}
+                          selectedImageModel={selectedImageModel}
+                          onSelectImageModel={setSelectedImageModel}
+                        />
+                      ) : (
+                        <>
+                          {messages.map((msg, i) => (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 20 }} 
+                              animate={{ opacity: 1, y: 0 }} 
+                              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                              key={i} 
+                              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                            >
+                              <div className={`flex items-center gap-3 mb-2 px-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${msg.role === 'user' ? 'bg-zinc-800' : 'bg-gradient-to-tr from-purple-600 to-blue-500'}`}>
+                                  {msg.role === 'user' ? <div className="text-[10px] font-bold text-zinc-400">U</div> : <Sparkles className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">{msg.role === 'user' ? 'Tú' : 'SAM IA'}</span>
+                              </div>
+
+                              <div className={`relative group max-w-[90%] md:max-w-[85%] ${msg.role === 'user' ? 'bg-[#131314] border border-white/5 rounded-[2rem] rounded-tr-lg p-5 shadow-xl' : 'bg-transparent w-full'}`}>
+                                {msg.isCreatorCard ? (
+                                  <CreatorCard />
+                                ) : (
+                                  <div className="space-y-4">
+                                    {msg.image && (
+                                      <div className="rounded-2xl overflow-hidden border border-white/10 max-w-md shadow-2xl">
+                                        <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+                                      </div>
+                                    )}
+                                    
+                                    {(msg.reasoning_details || msg.reasoning) && (
+                                      <ReasoningDisplay reasoning={msg.reasoning_details || msg.reasoning || ""} />
+                                    )}
+
+                                    <div className={`prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#0a0a0a] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl ${msg.role === 'user' ? 'text-zinc-200' : 'text-zinc-300'}`}>
+                                      <ReactMarkdown 
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                          code({node, inline, className, children, ...props}: any) {
+                                            const match = /language-(\w+)/.exec(className || '')
+                                            return !inline && match ? (
+                                              <div className="relative group/code my-6">
+                                                <div className="absolute -top-3 left-4 px-3 py-1 bg-zinc-800 border border-white/10 rounded-full text-[10px] font-bold text-zinc-400 uppercase tracking-widest z-10">
+                                                  {match[1]}
+                                                </div>
+                                                <SyntaxHighlighter
+                                                  {...props}
+                                                  children={String(children).replace(/\n$/, '')}
+                                                  style={vscDarkPlus}
+                                                  language={match[1]}
+                                                  PreTag="div"
+                                                  className="rounded-2xl !bg-[#0a0a0a] !border !border-white/5 !p-6 !pt-8"
+                                                />
+                                              </div>
+                                            ) : (
+                                              <code {...props} className="bg-white/5 px-1.5 py-0.5 rounded text-purple-400 font-mono text-xs">
+                                                {children}
+                                              </code>
+                                            )
+                                          }
+                                        }}
+                                      >
+                                        {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
+                                      </ReactMarkdown>
+                                    </div>
+
+                                    {msg.role === 'assistant' && !msg.isCreatorCard && (
+                                      <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                        <button 
+                                          onClick={() => handleCopyMessage(msg.content, i)}
+                                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-bold text-zinc-500 hover:text-zinc-300 transition-all uppercase tracking-widest"
+                                          title="Copiar respuesta"
+                                        >
+                                          {copiedId === i ? (
+                                            <>
+                                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                              <span className="text-emerald-400">Copiado</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Copy className="w-3.5 h-3.5" /> Copiar
+                                            </>
+                                          )}
+                                        </button>
+                                        <div className="h-4 w-px bg-white/5 mx-1" />
+                                        <button 
+                                          onClick={() => handleRateMessage(i, 'up')}
+                                          className={`p-1.5 rounded-lg transition-all ${msg.rating === 'up' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-zinc-600 hover:text-zinc-300 hover:bg-white/10'}`}
+                                          title="Útil"
+                                        >
+                                          <ThumbsUp className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleRateMessage(i, 'down')}
+                                          className={`p-1.5 rounded-lg transition-all ${msg.rating === 'down' ? 'bg-red-500/20 text-red-400' : 'bg-white/5 text-zinc-600 hover:text-zinc-300 hover:bg-white/10'}`}
+                                          title="No útil"
+                                        >
+                                          <ThumbsDown className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                                <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-[#131314] prose-pre:border prose-pre:border-white/10">
-                                  {(msg.reasoning_details || msg.reasoning) && (
-                                    <ReasoningDisplay reasoning={msg.reasoning_details || msg.reasoning || ""} />
-                                  )}
-                                  <ReactMarkdown 
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                      code({node, inline, className, children, ...props}: any) {
-                                        const match = /language-(\w+)/.exec(className || '')
-                                        return !inline && match ? (
-                                          <SyntaxHighlighter
-                                            {...props}
-                                            children={String(children).replace(/\n$/, '')}
-                                            style={vscDarkPlus}
-                                            language={match[1]}
-                                            PreTag="div"
-                                          />
-                                        ) : (
-                                          <code {...props} className={className}>
-                                            {children}
-                                          </code>
-                                        )
-                                      }
-                                    }}
-                                  >
-                                    {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
-                                  </ReactMarkdown>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                      {isLoading && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 items-center text-zinc-500 px-1">
-                          <div className="flex gap-1">
-                            <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                            <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                            <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
-                          </div>
-                          <span className="text-xs font-mono tracking-widest uppercase opacity-50">Procesando</span>
-                        </motion.div>
+                                
+                                {/* Message Actions */}
+                                {msg.role === 'user' && (
+                                  <div className="absolute top-2 -left-12 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
+                                    <button 
+                                      onClick={() => handleCopyMessage(msg.content, i)}
+                                      className="p-2 hover:bg-white/5 rounded-full text-zinc-600 hover:text-zinc-300 transition-colors" 
+                                      title="Copiar"
+                                    >
+                                      {copiedId === i ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          ))}
+                          {isLoading && (
+                            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-4 items-center text-zinc-600 px-2">
+                              <div className="flex gap-1.5">
+                                <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2 }} className="w-1.5 h-1.5 bg-purple-500 rounded-full" />
+                                <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }} className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                                <motion.div animate={{ scale: [1, 1.4, 1], opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.4 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                              </div>
+                              <span className="text-[10px] font-bold tracking-[0.3em] uppercase opacity-50">Sincronizando</span>
+                            </motion.div>
+                          )}
+                          <div ref={messagesEndRef} className="h-28" />
+                        </>
                       )}
-                      <div ref={messagesEndRef} className="h-4" />
                     </div>
                   )}
                 </div>
@@ -916,11 +1135,17 @@ export default function App() {
               
               {/* Canvas */}
               {mode === 'canvas' && (
-                <div className={`flex-1 bg-[#1e1e1f] border-l border-white/5 p-4 flex flex-col transition-all duration-500 ${canvasView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-zinc-200 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-purple-400" /> Sandbox
-                    </h2>
+                <div className={`flex-1 bg-[#050505] border-l border-white/5 flex flex-col transition-all duration-500 ${canvasView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
+                  <div className="flex items-center justify-between p-6 border-b border-white/5">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                        <Monitor className="w-5 h-5 text-zinc-100" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-bold text-zinc-100 tracking-tight">Sandbox</h2>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Entorno de Ejecución</p>
+                      </div>
+                    </div>
                     <div className="flex gap-2">
                       <button 
                         onClick={() => {
@@ -945,9 +1170,13 @@ export default function App() {
                       <div className="w-3 h-3 rounded-full bg-green-500" />
                     </div>
                   </div>
-                  <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-2xl relative">
+                  <div className="flex-1 glass-panel rounded-[2rem] overflow-hidden shadow-2xl relative group/sandbox">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5 opacity-0 group-hover/sandbox:opacity-100 transition-opacity duration-1000 pointer-events-none" />
                     {canvasCode ? (
-                      <iframe
+                      <motion.iframe
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
                         srcDoc={canvasCode.includes('<!DOCTYPE html>') ? canvasCode : `
                           <!DOCTYPE html>
                           <html>
@@ -955,23 +1184,35 @@ export default function App() {
                               <meta charset="utf-8">
                               <meta name="viewport" content="width=device-width, initial-scale=1">
                               <script src="https://cdn.tailwindcss.com"></script>
-                              <style>body { font-family: sans-serif; margin: 0; padding: 20px; }</style>
+                              <style>
+                                body { 
+                                  font-family: 'Inter', sans-serif; 
+                                  margin: 0; 
+                                  padding: 24px; 
+                                  background: transparent;
+                                  color: #18181b;
+                                }
+                                ::-webkit-scrollbar { width: 8px; }
+                                ::-webkit-scrollbar-track { background: transparent; }
+                                ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+                                ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+                              </style>
                             </head>
                             <body>
                               ${canvasCode.includes('<script') || canvasCode.includes('<style') ? canvasCode : `<div>${canvasCode}</div>`}
                             </body>
                           </html>
                         `}
-                        className="w-full h-full border-none"
+                        className="w-full h-full border-none bg-white"
                         title="Sandbox Preview"
                       />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center">
-                        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
-                          <Bot className="w-8 h-8 text-zinc-300" />
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center bg-white/[0.01]">
+                        <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mb-6 border border-white/5 shadow-inner">
+                          <Bot className="w-10 h-10 text-zinc-600" />
                         </div>
-                        <p className="text-lg font-medium text-zinc-600 mb-2">Sandbox Vacío</p>
-                        <p className="text-sm">Activa el modo Canvas y pídele a SAM que programe algo para verlo aquí.</p>
+                        <h3 className="text-xl font-bold text-zinc-300 mb-2 tracking-tight">Sandbox Vacío</h3>
+                        <p className="text-sm text-zinc-500 max-w-xs leading-relaxed">Activa el modo Canvas y pídele a SAM que programe algo para verlo aquí en tiempo real.</p>
                       </div>
                     )}
                   </div>
@@ -998,24 +1239,29 @@ export default function App() {
             </>
           )}
         </main>
+      </div>
 
         {/* Input Area (Professional Elongated Bar) */}
-        <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-auto md:w-full md:max-w-3xl md:mx-auto z-20">
-          <div className="bg-[#1e1e1f] border border-white/10 rounded-full shadow-lg h-14 flex items-center px-2 md:px-4">
+        {viewMode === 'chat' && (
+          <div className="absolute bottom-8 left-4 right-4 md:left-auto md:right-auto md:w-full md:max-w-4xl md:mx-auto z-20">
+            <div className="glass-panel rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] h-20 flex items-center px-3 md:px-6 group focus-within:border-white/20 focus-within:shadow-[0_0_50px_rgba(139,92,246,0.1)] transition-all duration-500 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-blue-500/5 opacity-0 group-focus-within:opacity-100 transition-opacity duration-1000 pointer-events-none" />
             
             {/* Slash Commands */}
             <AnimatePresence>
               {showSlashCommands && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-full left-0 mb-2 bg-[#1e1e1f] border border-white/10 rounded-2xl shadow-xl overflow-hidden w-64 z-50"
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute bottom-full left-0 mb-4 bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden w-72 z-50 p-2"
                 >
-                  <div className="p-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Comandos</div>
-                  <button type="button" onClick={() => handleSlashCommand('/resumir')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><File className="w-4 h-4 text-blue-400"/> Resumir texto</button>
-                  <button type="button" onClick={() => handleSlashCommand('/explicar')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><BookOpen className="w-4 h-4 text-emerald-400"/> Explicar concepto</button>
-                  <button type="button" onClick={() => handleSlashCommand('/codigo')} className="w-full text-left px-4 py-2 hover:bg-white/5 text-zinc-200 flex items-center gap-2"><Pencil className="w-4 h-4 text-purple-400"/> Escribir código</button>
+                  <div className="p-2 text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Comandos Rápidos</div>
+                  <div className="space-y-1">
+                    <button type="button" onClick={() => handleSlashCommand('/resumir')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-zinc-300 flex items-center gap-3 transition-colors text-xs font-medium"><div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center"><File className="w-4 h-4 text-blue-400"/></div> Resumir contenido</button>
+                    <button type="button" onClick={() => handleSlashCommand('/explicar')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-zinc-300 flex items-center gap-3 transition-colors text-xs font-medium"><div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center"><BookOpen className="w-4 h-4 text-emerald-400"/></div> Explicar concepto</button>
+                    <button type="button" onClick={() => handleSlashCommand('/codigo')} className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-xl text-zinc-300 flex items-center gap-3 transition-colors text-xs font-medium"><div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center"><Pencil className="w-4 h-4 text-purple-400"/></div> Generar código</button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1024,16 +1270,16 @@ export default function App() {
             <AnimatePresence>
               {selectedImage && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute bottom-full left-0 mb-2 w-16 h-16 rounded-2xl overflow-hidden border border-white/10"
+                  initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                  className="absolute bottom-full left-0 mb-4 w-20 h-20 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
                 >
                   <img src={selectedImage} alt="Selected" className="w-full h-full object-cover" />
                   <button 
                     type="button" 
                     onClick={() => setSelectedImage(null)}
-                    className="absolute top-1 right-1 bg-black/50 p-1 rounded-full hover:bg-black/80 text-white"
+                    className="absolute top-1 right-1 bg-black/80 p-1.5 rounded-full hover:bg-red-500 text-white transition-colors"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1041,124 +1287,161 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
-              <button type="button" onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-full transition-colors">
-                <Plus className="w-5 h-5" />
+            <form onSubmit={handleSubmit} className="flex items-center gap-3 w-full">
+              <button 
+                type="button" 
+                onClick={() => setIsPlusMenuOpen(!isPlusMenuOpen)} 
+                className={`p-2.5 rounded-full transition-all ${isPlusMenuOpen ? 'bg-white text-black' : 'text-zinc-500 hover:text-zinc-100 hover:bg-white/5'}`}
+              >
+                <Plus className={`w-5 h-5 transition-transform duration-300 ${isPlusMenuOpen ? 'rotate-45' : ''}`} />
               </button>
 
               <input
                 ref={inputRef}
                 value={input}
                 onChange={handleInputChange}
-                className="flex-1 bg-transparent px-2 py-2 outline-none text-zinc-100 placeholder:text-zinc-500"
-                placeholder="Pregúntale a SAM..."
+                className="pro-input px-2 py-4 text-sm font-medium"
+                placeholder="Escribe un mensaje o usa / para comandos..."
               />
 
-              <button
-                type="submit"
-                disabled={(!input.trim() && !selectedImage) || isLoading}
-                className="p-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={(!input.trim() && !selectedImage) || isLoading}
+                  className={`p-3 rounded-full transition-all flex items-center justify-center ${(!input.trim() && !selectedImage) || isLoading ? 'bg-white/5 text-zinc-700' : 'bg-white text-black hover:bg-zinc-200 shadow-lg shadow-white/5'}`}
+                >
+                  {isLoading ? (
+                    <motion.div 
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </motion.div>
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </form>
 
             <AnimatePresence>
               {isPlusMenuOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: 15, scale: 0.95, filter: "blur(10px)" }}
+                  initial={{ opacity: 0, y: 20, scale: 0.95, filter: "blur(10px)" }}
                   animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: 15, scale: 0.95, filter: "blur(10px)" }}
-                  transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                  className="absolute bottom-full left-0 mb-6 bg-[#131314]/90 backdrop-blur-2xl rounded-[2rem] p-4 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-[320px] overflow-hidden z-50"
+                  exit={{ opacity: 0, y: 20, scale: 0.95, filter: "blur(10px)" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="absolute bottom-full left-0 mb-6 bg-[#0a0a0a]/95 backdrop-blur-3xl rounded-[2.5rem] p-6 border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.8)] w-[340px] z-50"
                 >
-                  <div className="flex flex-col gap-4">
-                    {/* Media & Files Section */}
+                  <div className="space-y-6">
+                    {/* Herramientas Section */}
                     <div>
-                      <div className="px-2 mb-3 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Herramientas</span>
+                      <div className="px-2 mb-4 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.25em]">Herramientas Pro</span>
                         <div className="h-[1px] flex-1 bg-white/5 ml-4" />
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-3">
                         <button 
                           type="button" 
                           onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} 
-                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                          className="flex flex-col items-center justify-center gap-3 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 rounded-3xl text-zinc-300 transition-all group"
                         >
-                          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <ImageIcon className="w-5 h-5 text-blue-400" />
+                          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                            <ImageIcon className="w-6 h-6 text-blue-400" />
                           </div>
-                          <span className="text-[11px] font-medium">Imagen</span>
+                          <span className="text-[11px] font-bold uppercase tracking-wider">Imagen</span>
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => { setIsImagePromptOpen(true); setIsPlusMenuOpen(false); }} 
+                          className="flex flex-col items-center justify-center gap-3 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 rounded-3xl text-zinc-300 transition-all group"
+                        >
+                          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                            <Sparkles className="w-6 h-6 text-purple-400" />
+                          </div>
+                          <span className="text-[11px] font-bold uppercase tracking-wider">Generar</span>
                         </button>
                         <button 
                           type="button" 
                           onClick={() => { fileInputRef.current?.click(); setIsPlusMenuOpen(false); }} 
-                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                          className="flex flex-col items-center justify-center gap-3 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 rounded-3xl text-zinc-300 transition-all group"
                         >
-                          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <File className="w-5 h-5 text-emerald-400" />
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                            <File className="w-6 h-6 text-emerald-400" />
                           </div>
-                          <span className="text-[11px] font-medium">Archivo</span>
+                          <span className="text-[11px] font-bold uppercase tracking-wider">Archivo</span>
                         </button>
                         <button 
                           type="button" 
                           onClick={() => { cameraInputRef.current?.click(); setIsPlusMenuOpen(false); }} 
-                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                          className="flex flex-col items-center justify-center gap-3 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 rounded-3xl text-zinc-300 transition-all group"
                         >
-                          <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Camera className="w-5 h-5 text-purple-400" />
+                          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                            <Camera className="w-6 h-6 text-purple-400" />
                           </div>
-                          <span className="text-[11px] font-medium">Cámara</span>
+                          <span className="text-[11px] font-bold uppercase tracking-wider">Cámara</span>
                         </button>
                         <button 
                           type="button" 
                           onClick={() => { setIsQuizSetupOpen(true); setIsPlusMenuOpen(false); }} 
-                          className="flex flex-col items-center justify-center gap-2 p-4 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 rounded-2xl text-zinc-200 transition-all group"
+                          className="flex flex-col items-center justify-center gap-3 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 rounded-3xl text-zinc-300 transition-all group"
                         >
-                          <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <HelpCircle className="w-5 h-5 text-yellow-400" />
+                          <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                            <HelpCircle className="w-6 h-6 text-yellow-400" />
                           </div>
-                          <span className="text-[11px] font-medium">Quiz</span>
+                          <span className="text-[11px] font-bold uppercase tracking-wider">Quiz</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Modes Section */}
+                    {/* Modos Section */}
                     <div>
-                      <div className="px-2 mb-3 flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Modos Especiales</span>
+                      <div className="px-2 mb-4 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.25em]">Configuración de Sesión</span>
                         <div className="h-[1px] flex-1 bg-white/5 ml-4" />
                       </div>
-                      <div className="flex flex-col gap-2">
+                      <div className="space-y-2">
                         <button 
                           type="button" 
                           onClick={() => { setMode(mode === 'chat' ? 'canvas' : 'chat'); setIsPlusMenuOpen(false); }} 
-                          className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${mode === 'canvas' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05]'}`}
+                          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${mode === 'canvas' ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05]'}`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${mode === 'canvas' ? 'bg-indigo-500/20' : 'bg-white/5'}`}>
+                          <div className="flex items-center gap-4">
+                            <div className={`p-2.5 rounded-xl ${mode === 'canvas' ? 'bg-indigo-500/20' : 'bg-white/5'}`}>
                               <Sparkles className="w-4 h-4" />
                             </div>
-                            <span className="text-xs font-medium">Modo Canvas</span>
+                            <div className="flex flex-col items-start">
+                              <span className="text-xs font-bold uppercase tracking-wider">Modo Canvas</span>
+                              <span className="text-[9px] text-zinc-600">Previsualización en tiempo real</span>
+                            </div>
                           </div>
-                          <div className={`w-8 h-4 rounded-full relative transition-colors ${mode === 'canvas' ? 'bg-indigo-500' : 'bg-zinc-700'}`}>
-                            <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${mode === 'canvas' ? 'left-5' : 'left-1'}`} />
+                          <div className={`w-10 h-5 rounded-full relative transition-colors ${mode === 'canvas' ? 'bg-indigo-500' : 'bg-zinc-800'}`}>
+                            <motion.div 
+                              animate={{ x: mode === 'canvas' ? 20 : 4 }}
+                              className="absolute top-1 w-3 h-3 bg-white rounded-full shadow-lg" 
+                            />
                           </div>
                         </button>
 
                         <button 
                           type="button" 
                           onClick={() => { setIsVoiceEnabled(!isVoiceEnabled); setIsPlusMenuOpen(false); }} 
-                          className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isVoiceEnabled ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05]'}`}
+                          className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${isVoiceEnabled ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.05]'}`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${isVoiceEnabled ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                          <div className="flex items-center gap-4">
+                            <div className={`p-2.5 rounded-xl ${isVoiceEnabled ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
                               <Volume2 className="w-4 h-4" />
                             </div>
-                            <span className="text-xs font-medium">Respuesta por Voz</span>
+                            <div className="flex flex-col items-start">
+                              <span className="text-xs font-bold uppercase tracking-wider">Respuesta Vocal</span>
+                              <span className="text-[9px] text-zinc-600">Lectura automática de mensajes</span>
+                            </div>
                           </div>
-                          <div className={`w-8 h-4 rounded-full relative transition-colors ${isVoiceEnabled ? 'bg-emerald-500' : 'bg-zinc-700'}`}>
-                            <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${isVoiceEnabled ? 'left-5' : 'left-1'}`} />
+                          <div className={`w-10 h-5 rounded-full relative transition-colors ${isVoiceEnabled ? 'bg-emerald-500' : 'bg-zinc-800'}`}>
+                            <motion.div 
+                              animate={{ x: isVoiceEnabled ? 20 : 4 }}
+                              className="absolute top-1 w-3 h-3 bg-white rounded-full shadow-lg" 
+                            />
                           </div>
                         </button>
                       </div>
@@ -1167,9 +1450,9 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </div>
-        </div>
-      </div>
+        )}
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -1184,34 +1467,81 @@ export default function App() {
             />
             <motion.div 
               key="sidebar-content"
-              initial={{ x: -300, opacity: 0 }} 
+              initial={{ x: -320, opacity: 0 }} 
               animate={{ x: 0, opacity: 1 }} 
-              exit={{ x: -300, opacity: 0 }} 
-              transition={{ type: "spring", bounce: 0, duration: 0.4 }} 
-              className="fixed left-0 top-0 z-[210] h-full w-[280px] bg-[#131314]/95 backdrop-blur-xl border-r border-white/5 p-4 flex flex-col shadow-2xl"
+              exit={{ x: -320, opacity: 0 }} 
+              transition={{ type: "spring", damping: 25, stiffness: 200 }} 
+              className="fixed left-0 top-0 z-[210] h-full w-[300px] bg-[#050505] border-r border-white/5 flex flex-col shadow-[20px_0_50px_rgba(0,0,0,0.5)]"
             >
-              <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-              <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-6 flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all text-zinc-200"><Plus className="w-5 h-5" /> Nuevo Chat</button>
-              
-              <div className="mt-8 flex-1 overflow-y-auto pr-2 space-y-8 scrollbar-hide">
-                <div className="space-y-2">
-                  <div className="px-2 mb-3 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recientes</span>
-                    <div className="h-[1px] flex-1 bg-white/5 ml-4" />
+              {/* Sidebar Header */}
+              <div className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <button className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-400 text-sm group">
-                      <Clock className="w-4 h-4 group-hover:text-purple-400" />
-                      <span className="truncate">Nueva conversación...</span>
+                  <span className="text-sm font-bold tracking-[0.2em] text-white uppercase">SAM IA</span>
+                </div>
+                <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors text-zinc-500 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+                {/* New Chat Button */}
+                <button 
+                  onClick={() => { setMessages([]); setIsSidebarOpen(false); }} 
+                  className="w-full flex items-center justify-center gap-3 p-4 bg-white text-black rounded-2xl font-bold text-sm hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-lg shadow-white/5"
+                >
+                  <Plus className="w-5 h-5" /> Nuevo Chat
+                </button>
+                
+                {/* Navigation Items */}
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }} 
+                    className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-300 text-sm font-medium"
+                  >
+                    <Settings className="w-4 h-4 text-zinc-500" /> Configuración
+                  </button>
+                  <button 
+                    onClick={() => { setViewMode('study'); setIsSidebarOpen(false); }} 
+                    className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-300 text-sm font-medium"
+                  >
+                    <BookOpen className="w-4 h-4 text-zinc-500" /> Estudio
+                  </button>
+                  <button 
+                    onClick={() => { setShowGallery(true); setIsSidebarOpen(false); }} 
+                    className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-300 text-sm font-medium"
+                  >
+                    <ImageIcon className="w-4 h-4 text-zinc-500" /> Galería
+                  </button>
+                </div>
+
+                {/* History Section */}
+                <div className="space-y-4">
+                  <div className="px-2 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Historial</span>
+                    <History className="w-3 h-3 text-zinc-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <button className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-400 text-xs group text-left">
+                      <Clock className="w-4 h-4 group-hover:text-purple-400 shrink-0" />
+                      <span className="truncate">Análisis de mercado 2026...</span>
+                    </button>
+                    <button className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-400 text-xs group text-left">
+                      <Clock className="w-4 h-4 group-hover:text-purple-400 shrink-0" />
+                      <span className="truncate">Optimización de algoritmos...</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <button onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all text-zinc-300">
-                  <Settings className="w-5 h-5" /> Configuración
-                </button>
+              {/* Sidebar Footer */}
+              <div className="p-4 border-t border-white/5">
+                <div className="px-3 py-2 flex items-center justify-between text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
+                  <span>v4.5.2-pro</span>
+                  <span>SAM LABS</span>
+                </div>
               </div>
             </motion.div>
           </>
@@ -1242,35 +1572,35 @@ export default function App() {
               exit={{ scale: 0.9, opacity: 0, y: 40 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 max-w-md w-full shadow-[0_0_100px_rgba(0,0,0,0.8)] relative z-10 overflow-hidden"
+              className="glass-panel rounded-[2.5rem] p-8 max-w-md w-full relative z-10 overflow-hidden"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-500" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-500 opacity-50" />
               
               <div className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
-                    <Settings className="w-5 h-5 text-zinc-100" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                    <Settings className="w-6 h-6 text-zinc-100" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-zinc-100 tracking-tight">Configuración</h2>
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Preferencias del Sistema</p>
                   </div>
                 </div>
-                <button onClick={() => setIsSettingsOpen(false)} className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors">
+                <button onClick={() => setIsSettingsOpen(false)} className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="flex gap-2 p-1 bg-white/5 rounded-2xl mb-8">
+              <div className="flex gap-2 p-1.5 bg-white/5 rounded-[1.25rem] mb-8">
                 <button 
                   onClick={() => setSettingsTab('general')}
-                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${settingsTab === 'general' ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl transition-all ${settingsTab === 'general' ? 'bg-white text-black shadow-xl shadow-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   General
                 </button>
                 <button 
                   onClick={() => setSettingsTab('updates')}
-                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${settingsTab === 'updates' ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-[0.2em] rounded-xl transition-all ${settingsTab === 'updates' ? 'bg-white text-black shadow-xl shadow-white/5' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   Actualizaciones
                 </button>
@@ -1301,20 +1631,24 @@ export default function App() {
                       <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-1">Modelo de IA</label>
                       <div className="space-y-3">
                         {[
-                          { id: "nvidia/llama-3.1-nemotron-70b-instruct", name: "Nemotron 70B", desc: "Razonamiento avanzado y precisión" },
-                          { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B", desc: "Velocidad extrema y potencia" },
-                          { id: "z-ai/glm-4.5-air:free", name: "GLM-4.5-Air", desc: "Modelo potente y gratuito" },
-                          { id: "deepseek/deepseek-r1:free", name: "DeepSeek R1", desc: "Razonamiento profundo y gratuito" }
+                          { id: "nvidia/llama-3.1-nemotron-70b-instruct", name: "SML-N 3.1", desc: "Razonamiento avanzado y precisión" },
+                          { id: "meta-llama/llama-3.3-70b-instruct:free", name: "SML-L 3.3", desc: "Velocidad extrema y potencia" },
+                          { id: "z-ai/glm-4.5-air:free", name: "SML-G 4.5", desc: "Modelo potente y gratuito" },
+                          { id: "deepseek/deepseek-r1:free", name: "SML-D R1", desc: "Razonamiento profundo y gratuito" }
                         ].map((m) => (
                           <button
                             key={m.id}
+                            disabled={!checkUsage(m.id)}
                             onClick={() => {
                               setSelectedModel(m.id);
                               localStorage.setItem('sam_selected_model', m.id);
                             }}
-                            className={`w-full p-5 rounded-2xl border flex flex-col items-start gap-1 transition-all ${selectedModel === m.id ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
+                            className={`w-full p-5 rounded-2xl border flex flex-col items-start gap-1 transition-all ${selectedModel === m.id ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'} ${!checkUsage(m.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
-                            <span className="text-sm font-bold">{m.name}</span>
+                            <div className="flex justify-between w-full">
+                              <span className="text-sm font-bold">{m.name}</span>
+                              <span className="text-[10px] font-bold uppercase">{m.id === "deepseek/deepseek-r1:free" ? "Ilimitado" : (checkUsage(m.id) ? (usage[m.id] || 0) + "/10" : "Límite alcanzado")}</span>
+                            </div>
                             <span className={`text-[10px] ${selectedModel === m.id ? 'text-black/60' : 'text-zinc-500'}`}>{m.desc}</span>
                           </button>
                         ))}
@@ -1378,6 +1712,68 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Image Prompt Modal */}
+      <AnimatePresence>
+        {isImagePromptOpen && (
+          <motion.div
+            key="image-prompt-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              key="image-prompt-content"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-panel rounded-[2.5rem] p-8 max-w-sm w-full relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500" />
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                    <ImageIcon className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-zinc-100 tracking-tight">Generar Imagen</h2>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">IA Generativa</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsImagePromptOpen(false)} className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-3 px-1">Prompt</label>
+                  <textarea 
+                    value={imagePrompt}
+                    onChange={(e) => setImagePrompt(e.target.value)}
+                    placeholder="Describe la imagen que quieres generar..."
+                    className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-zinc-100 outline-none focus:border-blue-500/50 transition-all placeholder:text-zinc-700 text-sm font-medium min-h-[120px] resize-none"
+                  />
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    if (imagePrompt.trim()) {
+                      handleGenerateImage(imagePrompt);
+                      setIsImagePromptOpen(false);
+                    }
+                  }}
+                  disabled={!imagePrompt.trim() || isGeneratingImage}
+                  className="w-full py-4 bg-white text-black rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-white/5"
+                >
+                  {isGeneratingImage ? 'Generando...' : 'Generar'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Exit Quiz Confirmation Modal */}
       <AnimatePresence>
         {isExitQuizModalOpen && (
@@ -1386,21 +1782,25 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[160] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
           >
             <motion.div
               key="exit-quiz-content"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#131314] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-panel rounded-[2.5rem] p-8 max-w-sm w-full relative overflow-hidden"
             >
-              <h2 className="text-xl font-semibold text-zinc-100 mb-4">¿Salir del cuestionario?</h2>
-              <p className="text-zinc-400 mb-6">Perderás todo tu progreso actual en este cuestionario.</p>
+              <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50" />
+              <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20 mb-6">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h2 className="text-xl font-bold text-zinc-100 mb-2">¿Salir del cuestionario?</h2>
+              <p className="text-sm text-zinc-500 mb-8 leading-relaxed">Perderás todo tu progreso actual en este cuestionario. Esta acción no se puede deshacer.</p>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setIsExitQuizModalOpen(false)}
-                  className="flex-1 py-3 bg-zinc-800 text-zinc-100 rounded-xl font-medium hover:bg-zinc-700 transition-colors"
+                  className="flex-1 py-4 bg-white/5 text-zinc-300 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
                 >
                   Cancelar
                 </button>
@@ -1410,9 +1810,122 @@ export default function App() {
                     setIsExitQuizModalOpen(false);
                     setQuizQuestions([]);
                   }}
-                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+                  className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
                 >
                   Salir
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Gallery Modal */}
+      <AnimatePresence>
+        {showGallery && (
+          <motion.div
+            key="gallery-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              key="gallery-content"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-panel rounded-[2.5rem] p-8 max-w-4xl w-full h-[80vh] relative overflow-hidden flex flex-col"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500" />
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                    <ImageIcon className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-zinc-100 tracking-tight">Galería</h2>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Tus Creaciones</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowGallery(false)} className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+                {gallery.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+                      <ImageIcon className="w-8 h-8 opacity-20" />
+                    </div>
+                    <p className="text-sm font-medium">Aún no has generado ninguna imagen.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {gallery.map((item, idx) => (
+                      <GalleryImage 
+                        key={idx} 
+                        item={item} 
+                        onClick={() => setSelectedGalleryImage(item)} 
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Image Preview Modal */}
+      <AnimatePresence>
+        {selectedGalleryImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedGalleryImage(null)}
+            className="fixed inset-0 z-[1100] flex items-center justify-center p-4 md:p-12 bg-black/95 backdrop-blur-xl cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-5xl w-full h-full flex flex-col items-center justify-center gap-6 cursor-default"
+            >
+              <button 
+                onClick={() => setSelectedGalleryImage(null)}
+                className="absolute top-0 right-0 p-3 bg-white/5 hover:bg-white/10 rounded-full text-white transition-all z-10"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <div className="relative w-full flex-1 flex items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl">
+                <img 
+                  src={selectedGalleryImage.url} 
+                  alt={selectedGalleryImage.prompt} 
+                  className="max-w-full max-h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              <div className="w-full max-w-2xl bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Prompt utilizado</p>
+                  <p className="text-sm text-zinc-200 italic line-clamp-2">"{selectedGalleryImage.prompt}"</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = selectedGalleryImage.url;
+                    link.download = `sam-ai-export.png`;
+                    link.click();
+                  }}
+                  className="px-8 py-3 bg-white text-black rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all flex items-center gap-2 shrink-0"
+                >
+                  Descargar Imagen
                 </button>
               </div>
             </motion.div>
@@ -1428,38 +1941,48 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[170] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
           >
             <motion.div
               key="quiz-setup-content"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#131314] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-panel rounded-[2.5rem] p-8 max-w-sm w-full relative overflow-hidden"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-zinc-100 flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-purple-400" /> Nuevo Cuestionario
-                </h2>
-                <button onClick={() => setIsQuizSetupOpen(false)} className="text-zinc-400 hover:text-white">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500" />
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                    <HelpCircle className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-zinc-100 tracking-tight">Cuestionario</h2>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Configuración</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsQuizSetupOpen(false)} className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Tema del cuestionario</label>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-3 px-1">Tema del cuestionario</label>
                   <input 
                     type="text"
                     value={quizTopic}
                     onChange={(e) => setQuizTopic(e.target.value)}
                     placeholder="Ej: Historia, Ciencia, Cine..."
-                    className="w-full bg-[#1e1e1f] border border-white/5 rounded-xl p-3 text-zinc-100 outline-none focus:border-purple-500/50 transition-all"
+                    className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-zinc-100 outline-none focus:border-purple-500/50 transition-all placeholder:text-zinc-700 text-sm font-medium"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Número de preguntas: {quizQuestionCount}</label>
+                  <div className="flex justify-between items-center mb-3 px-1">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Número de preguntas</label>
+                    <span className="text-xs font-mono text-purple-400 font-bold">{quizQuestionCount}</span>
+                  </div>
                   <input 
                     type="range"
                     min="3"
@@ -1469,10 +1992,6 @@ export default function App() {
                     onChange={(e) => setQuizQuestionCount(parseInt(e.target.value))}
                     className="w-full h-1.5 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-purple-500"
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-1 font-mono">
-                    <span>3</span>
-                    <span>15</span>
-                  </div>
                 </div>
 
                 <button 
@@ -1483,7 +2002,7 @@ export default function App() {
                     }
                   }}
                   disabled={!quizTopic.trim() || isLoading}
-                  className="w-full py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                  className="w-full py-4 bg-white text-black rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-white/5"
                 >
                   {isLoading ? 'Generando...' : 'Comenzar Cuestionario'}
                 </button>
