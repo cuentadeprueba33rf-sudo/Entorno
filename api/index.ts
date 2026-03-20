@@ -14,8 +14,15 @@ console.log(`OpenRouter API Key present: ${!!process.env.OPENROUTER_API_KEY}`);
 app.use(express.json());
 
 const MODELS = [
-  "nvidia/llama-3.1-nemotron-70b-instruct"
+  "nvidia/llama-3.1-nemotron-70b-instruct",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "z-ai/glm-4.5-air:free",
+  "deepseek/deepseek-r1:free",
+  "mistralai/mistral-7b-instruct:free",
+  "openrouter/auto"
 ];
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // API Route for OpenRouter Chat
 app.post("/api/chat", async (req, res) => {
@@ -36,43 +43,97 @@ app.post("/api/chat", async (req, res) => {
     : MODELS;
 
   for (const model of modelsToTry) {
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
-          "X-Title": "SAM IA",
-        },
-        body: JSON.stringify({
+    let retries = 0;
+    const maxRetries = 2;
+
+    while (retries <= maxRetries) {
+      try {
+        const payload: any = {
           model: model,
           messages: [
             { role: "system", content: req.body.personality || "Tu nombre es SAM IA. Eres un asistente útil y directo. Responde de manera concisa." },
-            ...messages.map((m: any) => ({
-              role: m.role,
-              content: m.content,
-              ...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {}),
-              ...(m.reasoning ? { reasoning: m.reasoning } : {})
-            }))
-          ],
-          reasoning: { enabled: true }
-        }),
-      });
+            ...messages.map((m: any) => {
+              // Ensure content is handled correctly for different models
+              let content = m.content;
+              if (Array.isArray(content)) {
+                // Some models prefer string content if it's just text
+                if (content.length === 1 && content[0].type === 'text') {
+                  content = content[0].text;
+                }
+              }
+              
+              return {
+                role: m.role,
+                content: content,
+                ...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {}),
+                ...(m.reasoning ? { reasoning: m.reasoning } : {})
+              };
+            })
+          ]
+        };
 
-      if (response.ok) {
-        const data = await response.json();
-        return res.json(data);
+        // Only enable reasoning for models that likely support it or if it's a "reasoning" model
+        // Explicitly disable for others like GLM to avoid unwanted thinking output
+        if (model.includes('r1') || model.includes('nemotron')) {
+          payload.reasoning = { enabled: true };
+        } else {
+          payload.reasoning = { enabled: false };
+        }
+
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+            "X-OpenRouter-Title": "SAM IA",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Strip reasoning if not a reasoning model to avoid unwanted UI display
+          if (!model.includes('r1') && !model.includes('nemotron')) {
+            if (data.choices?.[0]?.message) {
+              delete data.choices[0].message.reasoning;
+              delete data.choices[0].message.reasoning_details;
+            }
+          }
+          return res.json(data);
+        }
+        
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 429 && retries < maxRetries) {
+          console.warn(`Model ${model} rate limited (429). Retrying in ${1000 * (retries + 1)}ms...`);
+          retries++;
+          await sleep(1000 * retries);
+          continue;
+        }
+
+        // If 404, the model ID is likely wrong or unavailable, don't retry, just try next model
+        if (response.status === 404) {
+          console.error(`Model ${model} not found (404). Trying next model...`);
+          break;
+        }
+
+        // If 400, the payload might be invalid for this specific model
+        if (response.status === 400) {
+          console.error(`Model ${model} returned 400 (Bad Request). Payload might be invalid for this model.`, JSON.stringify(errorData, null, 2));
+          break;
+        }
+
+        console.error(`Model ${model} failed with status ${response.status}:`, JSON.stringify(errorData, null, 2));
+        break; // Try next model
+      } catch (error) {
+        console.warn(`Model ${model} failed with error:`, error);
+        break; // Try next model
       }
-      
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`Model ${model} failed with status ${response.status}:`, JSON.stringify(errorData, null, 2));
-    } catch (error) {
-      console.warn(`Model ${model} failed with error:`, error);
     }
   }
 
-  res.status(500).json({ error: "All models failed to respond. Please check your OpenRouter API key and balance." });
+  res.status(500).json({ error: "Todos los modelos de IA están saturados o no disponibles en este momento. Por favor, intenta de nuevo en unos segundos." });
 });
 
 // Vite middleware for development

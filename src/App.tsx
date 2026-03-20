@@ -96,8 +96,26 @@ const CreatorCard = () => (
   </motion.div>
 );
 
-const ReasoningDisplay = ({ reasoning }: { reasoning: string }) => {
+const ReasoningDisplay = ({ reasoning }: { reasoning: any }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const renderReasoning = (data: any): string => {
+    if (typeof data === 'string') return data;
+    if (Array.isArray(data)) {
+      return data.map(part => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && part.text) return part.text;
+        return JSON.stringify(part);
+      }).join('\n');
+    }
+    if (data && typeof data === 'object') {
+      if (data.text) return data.text;
+      return JSON.stringify(data);
+    }
+    return String(data || "");
+  };
+
+  const content = renderReasoning(reasoning);
 
   return (
     <div className="mb-4 bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
@@ -120,7 +138,7 @@ const ReasoningDisplay = ({ reasoning }: { reasoning: string }) => {
             className="overflow-hidden"
           >
             <div className="p-4 pt-0 text-xs text-zinc-400 font-mono leading-relaxed whitespace-pre-wrap border-t border-white/5 bg-black/20">
-              {reasoning}
+              {content}
             </div>
           </motion.div>
         )}
@@ -157,6 +175,7 @@ export default function App() {
   const [isExitQuizModalOpen, setIsExitQuizModalOpen] = useState(false);
   const [isQuizSetupOpen, setIsQuizSetupOpen] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>("nvidia/llama-3.1-nemotron-70b-instruct");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -174,12 +193,16 @@ export default function App() {
     const hasSeenNotice = localStorage.getItem('sam_notice_seen');
     const savedHistory = localStorage.getItem('sam_chat_history');
     const savedPersonality = localStorage.getItem('sam_personality') as Personality;
+    const savedModel = localStorage.getItem('sam_selected_model');
     
     if (savedHistory) {
       try { setMessages(JSON.parse(savedHistory)); } catch (e) {}
     }
     if (savedPersonality && PERSONALITY_PROMPTS[savedPersonality]) {
       setPersonality(savedPersonality);
+    }
+    if (savedModel) {
+      setSelectedModel(savedModel);
     }
 
     // Simulate optimal loading time
@@ -233,6 +256,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model: selectedModel,
           messages: [
             { 
               role: "user", 
@@ -305,6 +329,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
+          model: selectedModel,
           messages: newMessages.map(m => {
             const content = m.image 
               ? [
@@ -378,11 +403,72 @@ export default function App() {
     { icon: <Zap className="w-5 h-5 text-yellow-400" />, text: "Potencia mi día", action: "Dame consejos de productividad" },
     { icon: <Pencil className="w-5 h-5 text-purple-400" />, text: "Escribe algo", action: "Escribe un ensayo sobre..." },
     { icon: <Trophy className="w-5 h-5 text-yellow-400" />, text: "Hazme un cuestionario", action: "Cuestionario de 5 preguntas sobre cultura general" },
+    { icon: <Settings className="w-5 h-5 text-zinc-400" />, text: "Configuración", action: "/settings" },
     { icon: <Calculator className="w-5 h-5 text-blue-400" />, text: "Math Solver", action: "Resuelve este problema matemático: " },
   ];
 
+  const handleSuggestionClick = (s: any) => {
+    if (s.action === '/settings') {
+      setIsSettingsOpen(true);
+    } else {
+      setInput(s.action);
+    }
+  };
+
   return (
     <div className="flex h-[100dvh] bg-[#000000] text-zinc-100 font-sans overflow-hidden selection:bg-purple-500/30 relative">
+      {/* Precision Minimalist Floating Header */}
+      <header className={`fixed top-6 left-0 right-0 z-[100] flex justify-center px-4 pointer-events-none transition-opacity duration-300 ${isAppLoading || showNotice ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="h-12 px-2 bg-[#0a0a0a]/40 backdrop-blur-2xl border border-white/10 rounded-full flex items-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto"
+        >
+          {/* Menu Button */}
+          <button 
+            onClick={() => {
+              console.log('Opening Sidebar');
+              setIsSidebarOpen(true);
+            }} 
+            className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+          {/* Brand Identity */}
+          <div className="flex items-center gap-3 px-2 cursor-default group">
+            <h1 className="text-sm font-semibold tracking-[0.2em] text-zinc-100">
+              SAM
+            </h1>
+            <div className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400/40 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500"></span>
+            </div>
+          </div>
+
+          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+          {/* Actions */}
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => {
+                setIsSettingsOpen(true);
+              }}
+              className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-white/10 flex items-center justify-center group cursor-pointer hover:border-white/20 transition-all overflow-hidden">
+              <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-100 transition-colors">S</span>
+            </div>
+          </div>
+        </motion.div>
+      </header>
+
       {/* Optimal Minimalist Loading Screen */}
       <AnimatePresence>
         {isAppLoading && (
@@ -390,7 +476,7 @@ export default function App() {
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 1.02, filter: "blur(20px)" }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] bg-[#000000] flex flex-col items-center justify-center overflow-hidden"
+            className="fixed inset-0 z-[500] bg-[#000000] flex flex-col items-center justify-center overflow-hidden"
           >
             {/* Subtle Ambient Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px]" />
@@ -509,6 +595,26 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Floating Settings Button (New Location) */}
+      <AnimatePresence>
+        {!isAppLoading && !showNotice && !isSettingsOpen && (
+          <motion.button 
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            whileHover={{ scale: 1.1, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setIsSettingsOpen(true)}
+            className="fixed bottom-24 right-6 z-[150] p-4 bg-[#1e1e1f]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-zinc-400 hover:text-white transition-all md:bottom-8 md:right-8 group"
+          >
+            <Settings className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
+            <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black/80 backdrop-blur-md border border-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              Configuración
+            </span>
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* Under Construction Notice */}
       <AnimatePresence>
         {showNotice && (
@@ -516,7 +622,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -551,54 +657,7 @@ export default function App() {
       {/* Subtle futuristic background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-900/10 blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="flex-1 flex flex-col relative z-0">
-        {/* Precision Minimalist Floating Header */}
-        <header className="absolute top-6 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none">
-          <motion.div 
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="h-12 px-2 bg-[#0a0a0a]/40 backdrop-blur-2xl border border-white/10 rounded-full flex items-center gap-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto"
-          >
-            {/* Menu Button */}
-            <button 
-              onClick={() => setIsSidebarOpen(true)} 
-              className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-            {/* Brand Identity */}
-            <div className="flex items-center gap-3 px-2 cursor-default group">
-              <h1 className="text-sm font-semibold tracking-[0.2em] text-zinc-100">
-                SAM
-              </h1>
-              <div className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400/40 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-purple-500"></span>
-              </div>
-            </div>
-
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-            {/* Actions */}
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-              
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-900 border border-white/10 flex items-center justify-center group cursor-pointer hover:border-white/20 transition-all overflow-hidden">
-                <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <span className="text-[10px] font-bold text-zinc-400 group-hover:text-zinc-100 transition-colors">S</span>
-              </div>
-            </div>
-          </motion.div>
-        </header>
-
+      <div className="flex-1 flex flex-col relative">
         {/* Chat Area / Canvas Area / Quiz Area */}
         <main className="flex-1 overflow-hidden flex relative pt-20">
           {isGeneratingQuiz && (
@@ -774,7 +833,13 @@ export default function App() {
                       </h1>
                       <div className="flex flex-col items-start gap-3">
                         {suggestions.map((s, i) => (
-                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={i} onClick={() => setInput(s.action)} className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20">
+                          <motion.button 
+                            whileHover={{ scale: 1.02 }} 
+                            whileTap={{ scale: 0.98 }} 
+                            key={i} 
+                            onClick={() => handleSuggestionClick(s)} 
+                            className="flex items-center gap-3 bg-[#131314] border border-white/5 px-5 py-3.5 rounded-full hover:bg-[#1e1e1f] transition-all duration-300 shadow-lg shadow-black/20"
+                          >
                             {s.icon} <span className="text-sm font-medium text-zinc-300">{s.text}</span>
                           </motion.button>
                         ))}
@@ -825,7 +890,7 @@ export default function App() {
                                       }
                                     }}
                                   >
-                                    {msg.content}
+                                    {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
                                   </ReactMarkdown>
                                 </div>
                               </>
@@ -1108,111 +1173,158 @@ export default function App() {
       {/* Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.div 
-            key="sidebar-overlay"
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            onClick={() => setIsSidebarOpen(false)} 
-            className="fixed inset-0 bg-black/60 z-[120] backdrop-blur-sm" 
-          />
-        )}
-        {isSidebarOpen && (
-          <motion.div 
-            key="sidebar-content"
-            initial={{ x: -300, opacity: 0 }} 
-            animate={{ x: 0, opacity: 1 }} 
-            exit={{ x: -300, opacity: 0 }} 
-            transition={{ type: "spring", bounce: 0, duration: 0.4 }} 
-            className="fixed left-0 top-0 z-[130] h-full w-[280px] bg-[#131314]/95 backdrop-blur-xl border-r border-white/5 p-4 flex flex-col shadow-2xl"
-          >
-            <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-            <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-6 flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all text-zinc-200"><Plus className="w-5 h-5" /> Nuevo Chat</button>
-            
-            <div className="mt-8 flex-1 overflow-y-auto pr-2 space-y-8 scrollbar-hide">
-              <div className="space-y-2">
-                <div className="px-2 mb-3 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recientes</span>
-                  <div className="h-[1px] flex-1 bg-white/5 ml-4" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <button className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-400 text-sm group">
-                    <Clock className="w-4 h-4 group-hover:text-purple-400" />
-                    <span className="truncate">Nueva conversación...</span>
-                  </button>
+          <>
+            <motion.div 
+              key="sidebar-overlay"
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsSidebarOpen(false)} 
+              className="fixed inset-0 bg-black/60 z-[200] backdrop-blur-sm" 
+            />
+            <motion.div 
+              key="sidebar-content"
+              initial={{ x: -300, opacity: 0 }} 
+              animate={{ x: 0, opacity: 1 }} 
+              exit={{ x: -300, opacity: 0 }} 
+              transition={{ type: "spring", bounce: 0, duration: 0.4 }} 
+              className="fixed left-0 top-0 z-[210] h-full w-[280px] bg-[#131314]/95 backdrop-blur-xl border-r border-white/5 p-4 flex flex-col shadow-2xl"
+            >
+              <button onClick={() => setIsSidebarOpen(false)} className="self-end p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setMessages([]); setIsSidebarOpen(false); }} className="mt-6 flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all text-zinc-200"><Plus className="w-5 h-5" /> Nuevo Chat</button>
+              
+              <div className="mt-8 flex-1 overflow-y-auto pr-2 space-y-8 scrollbar-hide">
+                <div className="space-y-2">
+                  <div className="px-2 mb-3 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recientes</span>
+                    <div className="h-[1px] flex-1 bg-white/5 ml-4" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-all text-zinc-400 text-sm group">
+                      <Clock className="w-4 h-4 group-hover:text-purple-400" />
+                      <span className="truncate">Nueva conversación...</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <button onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all text-zinc-300">
-                <Settings className="w-5 h-5" /> Configuración
-              </button>
-            </div>
-          </motion.div>
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <button onClick={() => { setIsSettingsOpen(true); setIsSidebarOpen(false); }} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl transition-all text-zinc-300">
+                  <Settings className="w-5 h-5" /> Configuración
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
       {/* Settings Modal */}
       <AnimatePresence>
         {isSettingsOpen && (
-          <motion.div
-            key="settings-overlay"
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[140] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           >
             <motion.div
+              key="settings-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div
               key="settings-content"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#131314] border border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative z-[150]"
+              initial={{ scale: 0.9, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 40 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-8 max-w-md w-full shadow-[0_0_100px_rgba(0,0,0,0.8)] relative z-10 overflow-hidden"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-zinc-100 flex items-center gap-2"><Settings className="w-5 h-5"/> Configuración</h2>
-                <button onClick={() => setIsSettingsOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5"/></button>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-500" />
+              
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                    <Settings className="w-5 h-5 text-zinc-100" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-100 tracking-tight">Configuración</h2>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Preferencias del Sistema</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsSettingsOpen(false)} className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="flex gap-1 p-1 bg-white/5 rounded-xl mb-6">
+              <div className="flex gap-2 p-1 bg-white/5 rounded-2xl mb-8">
                 <button 
                   onClick={() => setSettingsTab('general')}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${settingsTab === 'general' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${settingsTab === 'general' ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   General
                 </button>
                 <button 
                   onClick={() => setSettingsTab('updates')}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${settingsTab === 'updates' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${settingsTab === 'updates' ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   Actualizaciones
                 </button>
               </div>
               
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+              <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 scrollbar-hide">
                 {settingsTab === 'general' ? (
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">Personalidad de SAM</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['professional', 'sarcastic', 'programmer', 'friend'] as Personality[]).map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => {
-                            setPersonality(p);
-                            localStorage.setItem('sam_personality', p);
-                          }}
-                          className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${personality === p ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-[#1e1e1f] border-white/5 text-zinc-400 hover:bg-white/5'}`}
-                        >
-                          {p === 'professional' ? 'Profesional' : p === 'sarcastic' ? 'Sarcástico' : p === 'programmer' ? 'Programador' : 'Amigo'}
-                        </button>
-                      ))}
+                  <div className="space-y-8">
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-1">Personalidad de SAM</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(['professional', 'sarcastic', 'programmer', 'friend'] as Personality[]).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => {
+                              setPersonality(p);
+                              localStorage.setItem('sam_personality', p);
+                            }}
+                            className={`p-4 rounded-2xl border text-xs font-bold capitalize transition-all ${personality === p ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
+                          >
+                            {p === 'professional' ? 'Profesional' : p === 'sarcastic' ? 'Sarcástico' : p === 'programmer' ? 'Programador' : 'Amigo'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-1">Modelo de IA</label>
+                      <div className="space-y-3">
+                        {[
+                          { id: "nvidia/llama-3.1-nemotron-70b-instruct", name: "Nemotron 70B", desc: "Razonamiento avanzado y precisión" },
+                          { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B", desc: "Velocidad extrema y potencia" },
+                          { id: "z-ai/glm-4.5-air:free", name: "GLM-4.5-Air", desc: "Modelo potente y gratuito" },
+                          { id: "deepseek/deepseek-r1:free", name: "DeepSeek R1", desc: "Razonamiento profundo y gratuito" }
+                        ].map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => {
+                              setSelectedModel(m.id);
+                              localStorage.setItem('sam_selected_model', m.id);
+                            }}
+                            className={`w-full p-5 rounded-2xl border flex flex-col items-start gap-1 transition-all ${selectedModel === m.id ? 'bg-white text-black border-white' : 'bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10'}`}
+                          >
+                            <span className="text-sm font-bold">{m.name}</span>
+                            <span className={`text-[10px] ${selectedModel === m.id ? 'text-black/60' : 'text-zinc-500'}`}>{m.desc}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     <div>
-                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-1 flex items-center gap-2">
                         <History className="w-3 h-3" /> Próximas Funciones
                       </h3>
                       <div className="space-y-3">
@@ -1224,14 +1336,14 @@ export default function App() {
                           { name: "Búsqueda en Internet", version: "1.3.01v", date: "24 marzo", active: false },
                           { name: "Generar Diapositivas/PDF", version: "1.07.1", date: "24 marzo", active: false },
                         ].map((update, idx) => (
-                          <div key={idx} className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-1">
+                          <div key={idx} className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-2">
                             <div className="flex justify-between items-center">
-                              <span className={`text-xs font-medium ${update.active ? 'text-zinc-200' : 'text-zinc-500'}`}>{update.name}</span>
-                              {update.active && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
+                              <span className={`text-xs font-bold ${update.active ? 'text-zinc-100' : 'text-zinc-500'}`}>{update.name}</span>
+                              {update.active && <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />}
                             </div>
                             <div className="flex justify-between items-center text-[10px] font-mono text-zinc-600">
                               <span>{update.version}</span>
-                              <span className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {update.date}</span>
+                              <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {update.date}</span>
                             </div>
                           </div>
                         ))}
@@ -1239,7 +1351,7 @@ export default function App() {
                     </div>
 
                     <div>
-                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+                      <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-4 px-1 flex items-center gap-2">
                         <ShieldCheck className="w-3 h-3" /> Límites de Uso
                       </h3>
                       <div className="grid gap-2">
@@ -1251,9 +1363,9 @@ export default function App() {
                           { name: "Modo Tutor", limit: "Sin límites" },
                           { name: "Diapositivas/PDF", limit: "5 tokens/día" },
                         ].map((item, idx) => (
-                          <div key={idx} className="flex justify-between items-center px-3 py-2 rounded-xl hover:bg-white/[0.02] transition-colors">
-                            <span className="text-[11px] text-zinc-400">{item.name}</span>
-                            <span className="text-[10px] font-mono text-zinc-500 bg-white/5 px-2 py-0.5 rounded-md">{item.limit}</span>
+                          <div key={idx} className="flex justify-between items-center px-4 py-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                            <span className="text-[11px] font-medium text-zinc-400">{item.name}</span>
+                            <span className="text-[10px] font-mono text-zinc-500 bg-white/5 px-2 py-1 rounded-lg border border-white/5">{item.limit}</span>
                           </div>
                         ))}
                       </div>
@@ -1274,7 +1386,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[160] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div
               key="exit-quiz-content"
@@ -1316,7 +1428,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[170] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           >
             <motion.div
               key="quiz-setup-content"
