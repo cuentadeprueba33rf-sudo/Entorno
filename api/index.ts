@@ -134,7 +134,7 @@ app.post("/api/chat", async (req, res) => {
     }
   }
 
-  res.status(500).json({ error: "Todos los modelos de IA están saturados o no disponibles en este momento. Por favor, intenta de nuevo en unos segundos." });
+  res.status(500).json({ error: "¡Ups! Parece que nuestros modelos están tomando un pequeño descanso. ¿Podrías intentarlo de nuevo en unos momentos?" });
 });
 
 // API Route for Image Generation
@@ -173,7 +173,7 @@ app.post("/api/generate-image", async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Image generation error:", error);
-    res.status(500).json({ error: "Failed to generate image" });
+    res.status(500).json({ error: "¡Ups! El servicio de imágenes no está disponible por el momento. ¿Podrías intentarlo un poco más tarde?" });
   }
 });
 

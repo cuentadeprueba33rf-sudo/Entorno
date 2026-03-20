@@ -371,7 +371,7 @@ export default function App() {
       setMode('quiz');
     } catch (error) {
       console.error("Error generating quiz:", error);
-      setMessages(prev => [...prev, { role: "assistant", content: "Lo siento, no pude generar el cuestionario en este momento. Inténtalo de nuevo." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: "¡Ups! El servicio para crear cuestionarios no está disponible por el momento. ¿Podrías intentarlo un poco más tarde?" }]);
     } finally {
       setIsGeneratingQuiz(false);
     }
@@ -380,7 +380,7 @@ export default function App() {
   const handleGenerateImage = async (prompt: string, modelId?: string) => {
     const activeModel = modelId || selectedImageModel;
     if (!checkUsage(activeModel)) {
-      setMessages(prev => [...prev, { role: "assistant", content: `Has alcanzado tu límite diario para el modelo ${IMAGE_MODELS.find(m => m.id === activeModel)?.name}. Por favor, intenta con otro modelo o espera a mañana.` }]);
+      setMessages(prev => [...prev, { role: "assistant", content: `Parece que has alcanzado tu límite diario para el modelo ${IMAGE_MODELS.find(m => m.id === activeModel)?.name}. Por favor, intenta con otro modelo o espera a mañana.` }]);
       return;
     }
     
@@ -393,7 +393,10 @@ export default function App() {
         body: JSON.stringify({ prompt, model: activeModel }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate image");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "¡Ups! El servicio de imágenes no está disponible por el momento. ¿Podrías intentarlo un poco más tarde?");
+      }
       const data = await response.json();
       const imageUrl = data.choices[0].message.images[0].image_url.url;
       
@@ -401,9 +404,9 @@ export default function App() {
       setNewImageReady(true);
       setMessages(prev => [...prev, { role: "assistant", content: `Aquí tienes tu imagen generada con ${IMAGE_MODELS.find(m => m.id === activeModel)?.name}:`, image: imageUrl }]);
       incrementUsage(activeModel);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating image:", error);
-      setMessages(prev => [...prev, { role: "assistant", content: "Lo siento, no pude generar la imagen en este momento. Inténtalo de nuevo." }]);
+      setMessages(prev => [...prev, { role: "assistant", content: error.message || "¡Ups! El servicio de imágenes no está disponible por el momento. ¿Podrías intentarlo un poco más tarde?" }]);
     } finally {
       setIsGeneratingImage(false);
     }
@@ -464,7 +467,7 @@ export default function App() {
 
     try {
       if (!checkUsage(selectedModel)) {
-        throw new Error("Has alcanzado tu límite diario para este modelo. Por favor, intenta con otro modelo o espera a mañana.");
+        throw new Error("Parece que has alcanzado tu límite diario para este modelo. Por favor, intenta con otro modelo o espera a mañana.");
       }
       const systemPrompt = mode === 'canvas' 
         ? `${PERSONALITY_PROMPTS[personality]}\nIMPORTANTE: Estás en MODO CANVAS. Tu objetivo es escribir código funcional (HTML/CSS/JS) que se pueda previsualizar. Responde ÚNICAMENTE con el bloque de código necesario. No des explicaciones en el chat.`
@@ -496,7 +499,7 @@ export default function App() {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Error en la respuesta del servidor");
+        throw new Error(errorData.error || "¡Ups! Parece que nuestros modelos están tomando un pequeño descanso. ¿Podrías intentarlo de nuevo en unos momentos?");
       }
       
       incrementUsage(selectedModel);
