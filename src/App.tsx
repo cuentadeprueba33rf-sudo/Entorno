@@ -394,8 +394,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "¡Ups! El servicio de imágenes no está disponible por el momento. ¿Podrías intentarlo un poco más tarde?");
+        await response.json().catch(() => ({}));
+        throw new Error("¡Ups! El servicio de imágenes no está disponible por el momento. ¿Podrías intentarlo un poco más tarde?");
       }
       const data = await response.json();
       const imageUrl = data.choices[0].message.images[0].image_url.url;
@@ -498,8 +498,8 @@ export default function App() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "¡Ups! Parece que nuestros modelos están tomando un pequeño descanso. ¿Podrías intentarlo de nuevo en unos momentos?");
+        await response.json().catch(() => ({}));
+        throw new Error("¡Ups! Parece que nuestros modelos están tomando un pequeño descanso. ¿Podrías intentarlo de nuevo en unos momentos?");
       }
       
       incrementUsage(selectedModel);

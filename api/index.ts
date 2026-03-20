@@ -11,7 +11,8 @@ const PORT = 3000;
 console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
 console.log(`OpenRouter API Key present: ${!!process.env.OPENROUTER_API_KEY}`);
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const MODELS = [
   "nvidia/llama-3.1-nemotron-70b-instruct",
